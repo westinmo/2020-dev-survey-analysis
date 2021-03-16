@@ -1,0 +1,33 @@
+---
+title: "00-EDA"
+output: html_notebook
+#### Preamble ####
+# Purpose: Initial exploratory data analysis of the 2020 stack overflow developer survey obtained from: https://insights.stackoverflow.com/survey/?_ga=2.264336585.777067861.1615819488-1997135835.1608088113
+# Author: Morgaine Westin
+# Date: 16 March 2021
+# Contact: morgaine.westin@mail.utoronto.ca
+# License: MIT
+# Pre-requisites: 
+# - Need to have downloaded the ACS data and saved it to inputs/data
+
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(here)
+library(readr)
+```
+
+Reading in Data
+```{r}
+#csv with survey results
+survey <- readr::read_csv(here("inputs/data/survey_results_public.csv"))
+#survey schema outlining which questions correspond to each column name
+schema <- read_csv(here("inputs/data/survey_results_schema.csv"))
+
+summary(survey)
+```
+
+
+
+

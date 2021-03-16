@@ -37,3 +37,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# EDA-notebook-html
+00-EDA.nb.html
