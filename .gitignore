@@ -40,3 +40,6 @@ vignettes/*.pdf
 
 # EDA-notebook-html
 .00-EDA.nb.html
+
+# DS store
+.DS_Store
