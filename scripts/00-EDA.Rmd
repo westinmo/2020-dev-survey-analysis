@@ -16,6 +16,8 @@ output: html_notebook
 library(tidyverse)
 library(here)
 library(readr)
+library(visdat)
+library(janitor)
 ```
 
 Reading in Data
@@ -24,10 +26,65 @@ Reading in Data
 survey <- readr::read_csv(here("inputs/data/survey_results_public.csv"))
 #survey schema outlining which questions correspond to each column name
 schema <- read_csv(here("inputs/data/survey_results_schema.csv"))
+glimpse(survey)
+head(survey)
+```
 
-summary(survey)
+Checking distribution of Country - Due to the size, we will eventually filter to look only at US data
+```{r}
+table(survey$Country)
+
+table(survey_clean$EdLevel)
+```
+
+Filtering data for US only and selecting variables of potential interest to check for missing data
+```{r}
+filtered_data <- survey %>%
+  filter(Country == "United States") %>%
+  select("MainBranch", "Age", "ConvertedComp", "Country", "DevType", "EdLevel", "Employment", "Ethnicity", "Gender",
+         "OrgSize", "Sexuality", "SOAccount", "Trans", "UndergradMajor", "WorkWeekHrs", "YearsCode", "YearsCodePro")
+head(filtered_data)
+summary(filtered_data)
+
+vis_dat(filtered_data)
+vis_miss(filtered_data)
+sum(is.na(filtered_data))
+```
+
+```{r}
+filtered_data %>%
+  ggplot() + geom_bar(aes(x = MainBranch)) + coord_flip()
+
+filtered_data %>%
+  ggplot() + geom_bar(aes(x = Employment)) + coord_flip()
+```
+
+```{r}
+filtered_data %>%
+  ggplot() + geom_bar(aes(x = Gender)) + coord_flip()
+```
+
+```{r}
+table(filtered_data$Ethnicity)
+
+table(survey_clean$Ethnicity)
+```
+```{r, fig.width=10}
+survey_2 %>% 
+  ggplot(aes(x = Income, fill = Gender, color = Gender)) +
+  geom_density(alpha = 0.2) 
+
+range(survey_2$Age, na.rm = T)
+```
+```{r}
+table(survey_clean$Ethnicity)
+table(survey_clean$DevType)
 ```
 
 
-
+```{r}
+survey_clean %>%
+  ggplot() + geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
+  theme(legend.position = "bottom") + coord_flip() + labs(x = "Ethnicity", y = "Respondents")
+```
 
