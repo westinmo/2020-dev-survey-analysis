@@ -78,12 +78,12 @@ range(survey_2$Age, na.rm = T)
 ```
 ```{r}
 table(survey_clean$Ethnicity)
-table(survey_clean$DevType)
+table(survey_clean2$DevType)
 ```
 
 
 ```{r}
-survey_clean %>%
+survey_clean2 %>%
   ggplot() + geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
   theme(legend.position = "bottom") + coord_flip() + labs(x = "Ethnicity", y = "Respondents")
 ```
