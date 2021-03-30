@@ -22,7 +22,9 @@ survey_clean <- survey_raw %>%
 survey_clean <- survey_clean[!is.na(survey_clean$ConvertedComp), ] #7628 after removing NA income
 survey_clean <- survey_clean[!is.na(survey_clean$Gender), ] #7097 after removing NA gender
 survey_clean <- survey_clean[!is.na(survey_clean$Ethnicity), ] #6860 after removing NA Ethnicity
-survey_clean <- rename(survey_clean, c("Income" = "ConvertedComp"))
+survey_clean <- plyr::rename(survey_clean, c("ConvertedComp" = "Income"))
+
+
 #6860 reported their income, gender, and ethnicity
 
 #Re-categorizing gender responses into Man, Women, or Non-binary/genderqueer/gender non-conforming
