@@ -4,22 +4,26 @@ library(readr)
 library(visdat)
 library(janitor)
 library(questionr)
+library(plyr)
+
+
 
 #Reading in Data
-survey_raw <- readr::read_csv(here("inputs/data/survey_results_public.csv"))
+survey_raw <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
 #survey schema outlining which questions correspond to each column name
-schema <- read_csv(here("inputs/data/survey_results_schema.csv"))
+schema <- read_csv(here::here("inputs/data/survey_results_schema.csv"))
 
 #Filtering data for individuals who live in the United States and are employed full time
-survey_clean <- survey %>%
+survey_clean <- survey_raw %>%
   filter(Country == "United States", Employment == "Employed full-time")
+#9765 individuals in the United States who are Employed full-time
 
 #Removing rows with NAs
-survey_clean <- survey_clean[!is.na(survey_clean$ConvertedComp), ]
-survey_clean <- survey_clean[!is.na(survey_clean$Gender), ]
-survey_clean <- survey_clean[!is.na(survey_clean$Ethnicity), ]
+survey_clean <- survey_clean[!is.na(survey_clean$ConvertedComp), ] #7628 after removing NA income
+survey_clean <- survey_clean[!is.na(survey_clean$Gender), ] #7097 after removing NA gender
+survey_clean <- survey_clean[!is.na(survey_clean$Ethnicity), ] #6860 after removing NA Ethnicity
 survey_clean <- rename(survey_clean, c("Income" = "ConvertedComp"))
-
+#6860 reported their income, gender, and ethnicity
 
 #Re-categorizing gender responses into Man, Women, or Non-binary/genderqueer/gender non-conforming
 survey_clean$Gender <- case_when(str_detect(survey_clean$Gender, "Non-binary, genderqueer, or gender non-conforming")
@@ -30,53 +34,8 @@ survey_clean$Gender[survey_clean$Gender == "Woman;Man" ] <- "Non-binary, genderq
 survey_clean$Gender <- as.factor(survey_clean$Gender) %>%
   droplevels()
 
-table(survey_clean$Ethnicity)
+#table(survey_clean$Ethnicity)
 #Ethnicity
-
-#Individuals who selected multiracial or biracial (among their other selected ethnic groups), were placed in each respective group
-survey_clean$Ethnicity <- case_when(
-  str_detect(survey_clean$Ethnicity, "Multiracial") ~ "Multiracial",
-  str_detect(survey_clean$Ethnicity, "Biracial") ~ "Biracial", TRUE ~ survey_clean$Ethnicity
-  )
-
-#Individuals who selected multiple ethnic groups (but did not select multiracial or biracial) 
-#Placed into either biracial (if selected 2 ethic groups) or multiracial (if selected 3)
-survey_clean$Ethnicity <- case_when(
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;Hispanic or Latino/a/x") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;Middle Eastern") ~ "Biracial", 
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;Hispanic or Latino/a/x;
-             White or of European descent;Indigenous (such as Native American, Pacific Islander, or Indigenous Australian)") ~ "Multiracial",
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;South Asian") ~ "Biracial", 
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;White or of European descent") ~ "Biracial", 
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;Southeast Asian") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;Hispanic or Latino/a/x") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;Hispanic or Latino/a/x;White or of European descent") ~ "Multiracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;Indigenous (such as Native American, Pacific Islander, or Indigenous Australian)") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;Middle Eastern") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;South Asian") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;Southeast Asian") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;White or of European descent") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;White or of European descent;Southeast Asian") ~ "Multiracial",
-  str_detect(survey_clean$Ethnicity, "Hispanic or Latino/a/x;Indigenous (such as Native American, Pacific Islander, or Indigenous Australian)") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "Hispanic or Latino/a/x;Middle Eastern") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "Hispanic or Latino/a/x;Middle Eastern;White or of European descent") ~ "Multiracial",
-  str_detect(survey_clean$Ethnicity, "Hispanic or Latino/a/x;White or of European descent") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "South Asian;Southeast Asian") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "White or of European descent;South") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "White or of European descent;Indigenous") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "Hispanic or Latino/a/x;Indigenous") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, ";Southeast Asian") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "Middle Eastern;") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "East Asian;Indigenous") ~ "Biracial", 
-  str_detect(survey_clean$Ethnicity, "Indigenous") ~ "Indigenous",
-  TRUE ~ survey_clean$Ethnicity
-)
-
-survey_clean$Ethnicity <- case_when(
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;Hispanic or Latino/a/x") ~ "Biracial",
-  str_detect(survey_clean$Ethnicity, "Black or of African descent;Middle Eastern") ~ "Biracial", 
-  TRUE ~ survey_clean$Ethnicity
-)
 
 #Recfactoring Education levels
 survey_clean$EdLevel <- as.factor(survey_clean$EdLevel)
@@ -102,24 +61,20 @@ remove <- survey_clean %>%
 survey_clean <- survey_clean %>%
   anti_join(remove)
 
-survey_results_parsed <- survey_clean %>%
+#Splitting DevType and Ethnicity
+##survey_clean 2 has unnested dev types and ethnicities (potentially multiple rows representing 1 respondent)
+survey_clean2 <- survey_clean %>% 
   mutate(DevType = str_split(DevType, pattern = ";")) %>%
   unnest(DevType) %>%
-  mutate(
-    DevType = case_when(
-      str_detect(str_to_lower(DevType), "data scientist") ~ "Data scientist",
-      str_detect(str_to_lower(DevType), "data or business") ~ "Data analyst",
-      str_detect(str_to_lower(DevType), "desktop") ~ "Desktop",
-      str_detect(str_to_lower(DevType), "embedded") ~ "Embedded",
-      str_detect(str_to_lower(DevType), "devops") ~ "DevOps",
-      str_detect(DevType, "Engineer, data") ~ "Data engineer",
-      str_detect(str_to_lower(DevType), "site reliability") ~ "DevOps",
-      TRUE ~ DevType
-    ),
-    DevType = str_remove_all(DevType, "Developer, "),
-    DevType = str_to_sentence(DevType),
-    DevType = str_replace_all(DevType, "Qa", "QA"),
-    DevType = str_replace_all(DevType, "Sre", "SRE"),
-    DevType = str_replace_all(DevType, "Devops", "DevOps")
-  ) 
+  mutate(Ethnicity = str_split(Ethnicity, pattern = ";")) %>%
+  unnest(Ethnicity)
+
+
+survey_clean2$Ethnicity <- case_when(
+  str_detect(survey_clean2$Ethnicity, "Indigenous") ~ "Indigenous", TRUE ~ survey_clean2$Ethnicity)
+
+write_csv(survey_clean, here::here("inputs/data/survey_clean.csv"))
+write_csv(survey_clean2, here::here("inputs/data/survey_clean2.csv"))
+
+
 
