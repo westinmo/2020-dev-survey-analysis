@@ -75,8 +75,6 @@ survey_clean <- survey_clean %>%
 survey_unnest <- survey_clean %>% 
   mutate(DevType = str_split(DevType, pattern = ";")) %>%
   unnest(DevType) #%>%
-  #mutate(Ethnicity = str_split(Ethnicity, pattern = ";")) %>%
-  #unnest(Ethnicity)
 
 write_csv(survey_clean, here::here("inputs/data/survey_clean.csv"))
 write_csv(survey_unnest, here::here("inputs/data/survey_unnest.csv"))

@@ -1,11 +1,15 @@
 library(arm)
+
+#Factorizing gender
 survey_unnest$Gender <- as.factor(survey_unnest$Gender)
 
+#Removing NAs from categories used for PSM
 survey_unnest <- survey_unnest [!is.na(survey_unnest$EdLevel), ]
 survey_unnest <- survey_unnest [!is.na(survey_unnest$YearsCodePro), ] 
 survey_unnest <- survey_unnest [!is.na(survey_unnest$DevType), ]
 survey_unnest <- survey_unnest [!is.na(survey_unnest$Age), ]
 
+#PSM for gender
 propensity_score <- glm(Gender ~ Ethnicity + EdLevel + Ethnicity + DevType + Age + YearsCodePro,
                         family = binomial,
                         data = survey_unnest)
@@ -23,6 +27,7 @@ survey_unnest <-
 survey_unnest$Gender2 <- revalue(survey_unnest$Gender, c("Man"=1, "Woman"=2, "Non-binary, genderqueer, or gender non-conforming"=3))
 survey_unnest$Gender2 <- as.integer(survey_unnest$Gender2)
 
+#Matching
 matches <- arm::matching(z = survey_unnest$Gender2, score = survey_unnest$.fitted)
 survey_unnest <- cbind(survey_unnest, matches)
 
