@@ -22,7 +22,7 @@ library(scales)
 
 
 survey_clean <- read_csv(here::here("inputs/data/survey_clean.csv")) 
-survey_clean2 <- read_csv(here::here("inputs/data/survey_clean2.csv")) 
+survey_clean2 <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
 ```
 
 # Introduction
@@ -48,7 +48,7 @@ The publicly posted dataset for the 2020 survey contains 64461 observations with
 
 ## Variables
 
-```{r gender, fig.cap="no", echo = FALSE, include=FALSE}
+```{r gender, fig.cap="no", echo = FALSE}
 genderdf <- as.data.frame(tabyl(survey_clean$Gender, sort = TRUE)) %>%
   mutate(prop = round(percent*100, digits = 1)) %>%
   mutate(ypos = cumsum(prop)- 0.5*prop )
@@ -65,28 +65,32 @@ ggplot(genderdf, aes(x="", y=prop, fill = forcats::fct_rev(`survey_clean$Gender`
   theme(plot.title = element_text(face = "bold"))
 ```
 
-```{r ethnicity, fig.cap="No", echo = FALSE, include=FALSE}
-survey_clean2 %>%
+```{r ethnicity, fig.cap="No", echo = FALSE}
+survey_clean %>%
   ggplot() + 
-  geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
+  geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender)) + 
   coord_flip() + 
   theme_light() +
+  ylim(0, 4600) +
   labs(x = "Ethnicity") +
   scale_fill_manual(values = c("#599bba", "#91c989", "#d498b0"), labels = c("Man", "Non-Binary", "Woman")) +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank())
-```
-```{r ethnicitygen, include=FALSE, echo=FALSE}
-levels(survey_clean2$Gender)
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
+  geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
 
-survey_clean2 %>%
-  filter(Gender == "Woman" | Gender == "Non-binary, genderqueer, or gender non-conforming") %>%
+```
+
+```{r ethnicitygen, echo=FALSE}
+survey_clean %>%
+  filter(Gender == "Woman") %>%
   ggplot() + 
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
   coord_flip() + 
   theme_light() +
+  ylim(0, 450) +
   labs(x = "Ethnicity") +
-  scale_fill_manual(values = c("#91c989", "#d498b0"), labels = c("Non-Binary", "Woman")) +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank())
+  scale_fill_manual(values = c("#d498b0"), labels = c("Woman")) +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
+  geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
 ```
 
 # Model

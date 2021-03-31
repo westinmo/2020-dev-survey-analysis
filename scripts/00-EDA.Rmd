@@ -69,13 +69,7 @@ table(filtered_data$Ethnicity)
 
 table(survey_clean$Ethnicity)
 ```
-```{r, fig.width=10}
-survey_2 %>% 
-  ggplot(aes(x = Income, fill = Gender, color = Gender)) +
-  geom_density(alpha = 0.2) 
 
-range(survey_2$Age, na.rm = T)
-```
 ```{r}
 table(survey_clean$Ethnicity)
 table(survey_clean2$DevType)
@@ -86,5 +80,25 @@ table(survey_clean2$DevType)
 survey_clean2 %>%
   ggplot() + geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
   theme(legend.position = "bottom") + coord_flip() + labs(x = "Ethnicity", y = "Respondents")
+```
+```{r}
+survey_clean %>%
+  ggplot() + geom_density(aes(Income))
+```
+```{r}
+survey_unnest %>%
+  ggplot() + geom_bar(aes(x = forcats::fct_rev(fct_infreq(DevType)), fill = Gender), stat = "count") + 
+  theme(legend.position = "bottom") + coord_flip() 
+```
+
+```{r}
+remove2 <- survey_clean %>%
+  filter(str_detect(Ethnicity, ";"))
+
+survey_clean3 <- survey_clean %>%
+  anti_join(remove2)
+
+survey_clean3 %>% 
+  ggplot() + geom_bar(aes(x = Ethnicity), stat = "count") + coord_flip()
 ```
 
