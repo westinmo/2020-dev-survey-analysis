@@ -19,7 +19,12 @@ library(reshape2)
 library(janitor)
 library(broom)
 library(scales)
-
+library(performance)
+library(corrplot)
+library(see)
+library(lmtest)
+library(e1071) 
+library(rcompanion)
 
 survey_clean <- read_csv(here::here("inputs/data/survey_clean.csv")) 
 survey_clean2 <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
@@ -71,7 +76,7 @@ survey_clean %>%
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender)) + 
   coord_flip() + 
   theme_light() +
-  ylim(0, 4600) +
+  ylim(0, 4000) +
   labs(x = "Ethnicity") +
   scale_fill_manual(values = c("#599bba", "#91c989", "#d498b0"), labels = c("Man", "Non-Binary", "Woman")) +
   theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
@@ -86,7 +91,7 @@ survey_clean %>%
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
   coord_flip() + 
   theme_light() +
-  ylim(0, 450) +
+  ylim(0, 400) +
   labs(x = "Ethnicity") +
   scale_fill_manual(values = c("#d498b0"), labels = c("Woman")) +
   theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
@@ -95,7 +100,42 @@ survey_clean %>%
 
 # Model
 
+## Propensity Score Matching
+
+## Assumptions
+
+## Model?
+
 # Results
+```{r, fig.width=10}
+check_model(income_model)
+summary(income_model)
+
+plot(income_model, 1)
+bptest(income_model) #p > 0.05 constant variance
+shapiro.test(resid(income_model)) #p > 0.05 means residuals not normally distributed
+skewness(survey_matched$Income) #heavily skewed
+```
+
+```{r, fig.width=10}
+tukey <- transformTukey(survey_matched$Income, plotit = FALSE) #rcompanion
+skewness(survey_matched$Income)
+
+income_model_new <- 
+  lm((-1*Income^(-0.8)) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + DevType + YearsCodePro, 
+     data = survey_matched)
+summary(income_model_new)
+check_model(income_model_new)
+shapiro.test(resid(income_model_new)) #p > 0.05 means residuals not normally distributed
+
+income_model_new2 <- 
+  lm((-1*Income^(-0.8)) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + DevType + YearsCodePro + YearsCodePro * Gender, 
+     data = survey_matched)
+summary(income_model_new2) #After accounting for the interaction between professional exp and gender, gender no lomger significant
+
+```
+
+
 
 # Discussion
 

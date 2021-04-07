@@ -101,4 +101,7 @@ survey_clean3 <- survey_clean %>%
 survey_clean3 %>% 
   ggplot() + geom_bar(aes(x = Ethnicity), stat = "count") + coord_flip()
 ```
+```{r}
+class(survey_matched)
+```
 

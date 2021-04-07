@@ -1,3 +1,12 @@
+#### Preamble ####
+# Purpose: 
+# Author: Morgaine Westin
+# Date: 6 April 2021
+# Contact: morgaine.westin@mail.utoronto.ca
+# License: MIT
+# Pre-requisites: 
+# - Need to have downloaded the ACS data and saved it to inputs/data
+
 library(tidyverse)
 library(here)
 library(readr)
@@ -13,8 +22,11 @@ schema <- read_csv(here::here("inputs/data/survey_results_schema.csv"))
 
 #Filtering data for individuals who live in the United States and are employed full time
 survey_clean <- survey_raw %>%
-  filter(Country == "United States", Employment == "Employed full-time")
-#9765 individuals in the United States who are Employed full-time
+  filter(Country == "United States", 
+         Employment == "Employed full-time",
+         ConvertedComp > 20000
+  )
+#6384 individuals in the United States who are Employed full-time after trimming very low and very high salaries
 
 #Removing rows with NAs
 survey_clean <- survey_clean[!is.na(survey_clean$ConvertedComp), ] #7628 after removing NA income
@@ -41,6 +53,8 @@ multiple_eth <- survey_clean %>%
 survey_clean <- survey_clean %>%
   anti_join(multiple_eth)
 
+survey_clean$YearsCodePro <- as.integer(as.character(survey_clean$YearsCodePro))
+
 #Relabelling Indigenous
 survey_clean$Ethnicity <- case_when(
   str_detect(survey_clean$Ethnicity, "Indigenous") ~ "Indigenous", TRUE ~ survey_clean$Ethnicity)
@@ -66,7 +80,7 @@ survey_clean$EdLevel <- fct_collapse(survey_clean$EdLevel,
 #Removing researchers, educators, and scientists, managers, students, senior execs
 remove <- survey_clean %>%
   filter(str_detect(DevType, 
-                    "Academic researcher|Scientist|Educator|Student|Other|Marketing or sales professional|Product manager|Senior Executive (C-Suite, VP, etc.)|Senior Executive/VP|Engineering manager"))
+                    "Academic researcher|Scientist|Educator|Student|Other|Marketing or sales professional|Product manager|Senior Executive (C-Suite, VP, etc.)|Senior executive/VP|Engineering manager"))
 
 survey_clean <- survey_clean %>%
   anti_join(remove)
@@ -74,7 +88,7 @@ survey_clean <- survey_clean %>%
 #Splitting DevType
 survey_unnest <- survey_clean %>% 
   mutate(DevType = str_split(DevType, pattern = ";")) %>%
-  unnest(DevType) #%>%
+  unnest(DevType) #
 
 write_csv(survey_clean, here::here("inputs/data/survey_clean.csv"))
 write_csv(survey_unnest, here::here("inputs/data/survey_unnest.csv"))
