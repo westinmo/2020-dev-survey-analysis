@@ -1,59 +1,107 @@
 ---
-title: "title"
-subtitle: "Sub"
-author: Morgaine Westin
-thanks: "Code and data are available at: https://github.com/westinmo/2020-dev-survey-analysis."
+title: Diversity Concerns and Wage Inequalities in the United States Tech Industry
+  are Persistent
+author: "Morgaine Westin"
 date: "`r format(Sys.time(), '%d %B %Y')`"
-abstract: "wip"
 output:
-  bookdown::pdf_document2
-toc: FALSE
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+  latex_engine: default
+abstract: 'Despite promises from prominent companies to improve diversity in the workforce,
+  representation of women and racial minorities in the tech industry continues to
+  be a prominent issue. A serious consequence of gender and racial inequalities in
+  the workforce is the wage gap, in which women and women of colour in particular
+  receive lower salaries than their male counterparts. Using data from the 2020 Stack
+  Overflow Developer Survey, multiple linear regression was performed to model differences
+  in salaries among tech professionals based on gender, while taking into consideration
+  the effects of how gender may interact with other factors such as ethnicity and
+  years of experience. '
+thanks: 'Code and data are available at: https://github.com/westinmo/2020-dev-survey-analysis.'
+toc: no
 bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
+tinytex::reinstall_tinytex()
 library(tidyverse)
 library(reshape2)
 library(janitor)
 library(broom)
 library(scales)
 library(performance)
-library(corrplot)
 library(see)
 library(lmtest)
-library(e1071) 
-library(rcompanion)
+library(plyr)
+library(kableExtra)
+library(qqplotr)
+library(MLmetrics)
+library(modelsummary)
+library(stargazer)
+library(gtsummary)
+library(flextable)
+library(jtools)
+library(interactions)
+library(RColorBrewer)
 
 survey_clean <- read_csv(here::here("inputs/data/survey_clean.csv")) 
-survey_clean2 <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
+survey_unnest <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
+survey_matched <- read_csv(here::here("inputs/data/survey_matched.csv")) 
 ```
+**Keywords**: gender inequality, technology industry, wage gap, race, intersectionality, multiple linear regression
 
 # Introduction
-In 2019, the United States tech industry had 12.1 million employees and nearly 4.6 million job postings, many of which were for new emerging tech areas [@cyber] As the tech industry continues to grow and reports indicate the median wage for tech professionals is almost double the median national wage in the United States, more people are looking to enter the field. However, despite industry growth and the number of opportunities available, the tech field has been consistently dominated by white or Asian men [@harrison]. Gender and racial disparities in science, technology, engineering, and medicine (STEM) fields have been well documented. Notably, women and people of colour, particularly those identifying as African American, Latinx or Hispanic, or Native American, have been disproportionately underrepresented in these fields, including the tech industry [@jackson2013shared]. In response to growing calls for diversity, large tech companies such as Google, Microsoft, and Facebook have launched initiatives and pledges to help support underrepresented groups both within the workplace, and externally through funds, outreach programs, and diverse recruitment practices [@harrison; @bloomberg]. Whether or not these initiatives are effective is up for debate, with critics calling some diversity pledges “hollow” and arguing that companies need to make more meaningful efforts before we start seeing significant diversity improvements in the data [@rooney; @twine2018technology].
+In 2019, the United States tech industry had 12.1 million employees and nearly 4.6 million job postings, many of which were for new emerging tech areas [@cyber] As the tech industry continues to grow and reports indicate the median wage for tech professionals is almost double the median national wage in the United States, more people are looking to enter the field. However, despite industry growth and the number of opportunities available, the tech field has been consistently dominated by white or Asian men [@harrison]. Gender and racial disparities in science, technology, engineering, and medicine (STEM) fields have been well documented. Notably, women and people of colour, particularly those identifying as African American, Latinx or Hispanic, or Native American, have been disproportionately underrepresented in these fields. [@jackson2013shared]. In response to growing calls for diversity, large tech companies such as Google, Microsoft, and Facebook have launched initiatives and pledges to help support underrepresented groups both within the workplace, and externally through funds, outreach programs, and diverse recruitment practices [@harrison; @bloomberg]. Whether or not these initiatives are effective is up for debate, with critics calling some diversity pledges “hollow” and arguing that companies need to make more meaningful efforts before we start seeing significant diversity improvements in the data [@rooney; @twine2018technology].
 
-A major contributor to the diversity problem in tech is retention, or the rate at which underrepresented groups leave the field. Retention is frequently discussed in the literature surrounding representation in STEM education, where many women and racial minorities express interest in STEM fields and begin studying them at high rates, but end up switching to different programs early on, with very few individuals in these groups going on to pursue graduate degrees or professional positions [@asai2020race]. This is commonly referred to as the leaky pipeline, which extends from early on in STEM education (such as in highschool), to graduate and professional positions in STEM [@clark2005women]. As we look further down the pipeline, we see less high-level positions being held by underrepresented groups. This idea extends to the professional world as well, where women and underrepresented racial minorities take up a reasonable portion of entry-level or new tech positions, but are more likely to leave their jobs, and less likely to hold more senior positions in the company [@tapia2004recruitment]. Results from a 2017 report which examined why people voluntarily left their jobs in tech found that many women and people of colour were frequently passed over for promotions, and many experienced stereotyping and discrimination in the workplace [@techleave]. This suggests company diversity initiatives should not only focus on diverse recruitment and hiring practices, but on creating inclusive and safe workplaces while generating more opportunities for underrepresented groups to grow within the company. 
+One contributor to the diversity problem in tech is retention, or the rate at which underrepresented groups leave the field. Retention and the "leaky pipeline" are frequently discussed in the literature surrounding representation in STEM education, where many women and racial minorities express interest in STEM fields, but end up switching to different programs early on, with very few individuals in these groups going on to pursue graduate degrees or professional positions [@asai2020race]. This extends to the professional world as well, where women and underrepresented racial minorities take up a reasonable portion of entry-level or new tech positions, but are more likely to leave their jobs, and less likely to hold more senior positions in the company [@tapia2004recruitment]. Results from a 2017 report which examined why people voluntarily left their jobs in tech found that many women and people of colour were frequently passed over for promotions, and many experienced stereotyping and discrimination in the workplace [@techleave]. This suggests company diversity initiatives should not only focus on diverse recruitment and hiring practices, but on creating inclusive and safe workplaces while generating more opportunities for underrepresented groups to grow within the company. 
 
-Representation of women in tech in particular has been widely discussed. Among the various STEM fields, the gender gap in computer science is one of the most apparent, where the number of women graduating with a computer science or engineering degree has been decreasing since 1983 [@singh2007women]. Even so, women who persist in these degrees often face more challenges when trying to enter the tech industry. A survey conducted by the organization Girls Who Code which aimed to characterize the challenges faced by college-aged women when applying for technical positions found over half of female respondents reported a negative experience, or reported knowing a woman who has had one [@gwc]. Many of these women received dismissive, demeaning, and gender-biased remarks in the interview process, with some women experiencing sexual harassment in the form of inappropriate sexual comments and flirting [@gwc]. Issues such as these carry on past the early hiring stages and into toxic and sexist workplaces, causing many women to leave their positions due to concerns such as sexual harassment [@techleave]. These concerns are often worse for women of colour, particularly black women, Latina women, and Native American women. Much of the research conducted on representation in STEM has focused on the experiences on white, middle class women, and has failed to take an intersectional approach to address how factors such as gender, race, and class interact to put certain groups at a greater disadvantage [@alfrey2017gender]. Women of colour face a “double bind” when it comes to representation in STEM fields, and are more likely to fall between the cracks of intervention programs designed to improve diversity [@malcom1976double]. For instance, programs designed to increase representation for racialized groups are often geared towards men, while programs designed to increase female representation are often biased towards helping women in majority groups [@malcom1976double]. Finally, individuals who are transgender or non gender conforming, such as non-binary or genderqueer are also though to be disproportionately underrepresented in the tech industry, however there is significantly less data and research done to examine the experiences of these individuals in tech compared to other underrepresented groups [@dickey].
+Representation of women in tech in particular has been widely discussed. Among the various STEM fields, the gender gap in computer science is one of the most apparent, where the number of women graduating with a computer science or engineering degree has been decreasing since 1983 [@singh2007women]. Even so, women who persist in these degrees often face more challenges when trying to enter the tech industry. A survey conducted by the organization Girls Who Code which aimed to characterize the challenges faced by college-aged women when applying for technical positions found over half of female respondents reported a negative experience, or reported knowing a woman who has had one [@gwc]. Many of these women received dismissive, demeaning, and gender-biased remarks in the interview process, with some women experiencing sexual harassment in the form of inappropriate sexual comments and flirting [@gwc]. Issues such as these carry on past the early hiring stages and into toxic and sexist workplaces, causing many women to leave their positions due to concerns such as sexual harassment [@techleave]. 
 
-A major consequence of underrepresentation and gender and racial disparities in the workplace involves wage gaps. In 2019, a report from the tech job platform Hired found that 60% of men were offered higher salaries than their female counterparts for the same position at the same company, and that women were offered 3% less salary on average [@hired]. For many women who discovered they were being paid less than their male counterparts in the same position, the difference in salary was at least \$20,000. Moreover, the wage disparities grow when examining both gender and race. While white women and Asian women earn approximately \$0.97 for every dollar earned by White and Asian men, Black women and Hispanic Women earn \$0.89 and \$0.91 respectively [@hired]. This highlights the need to take an intersectional approach when examining wage gaps, as disparities exist even among women. 
+Much of the research conducted on representation in STEM has focused on the experiences on white, middle class women, and has failed to take an intersectional approach to address how factors such as gender, race, and class interact to put certain groups at a greater disadvantage [@alfrey2017gender]. Women of colour face a “double bind” when it comes to representation in STEM fields, and are more likely to fall between the cracks of intervention programs designed to improve diversity [@malcom1976double]. For instance, programs designed to increase representation for racialized groups are often geared towards men, while programs designed to increase female representation are often biased towards helping women in majority groups [@malcom1976double]. Finally, individuals who are transgender or non gender conforming, such as non-binary or genderqueer are also though to be disproportionately underrepresented in the tech industry, however there is significantly less data and research done to examine the experiences of these individuals in tech compared to other underrepresented groups [@dickey].
 
-In this report, I utilized data from the 2020 Stack Overflow Developer Survey to examine representation in the tech industry, and to look for potential wage disparities based on gender and ethnicity. Multiple linear regression modelling was implemented to test the effects of gender and ethnicity, as well as the interaction between the two, on income for tech professionals in the United States. The first section of the report provides an overview of the Developer Survey and its main results, particularly regarding the demographic characteristics of the respondents. The next sections discuss the process of building and implementing the regression model used to model income, and its results. Finally, I discuss the implications of my findings in the broader context of representation and bias in the tech industry, and the limitations of my work and how it can be extended upon. The data was prepared and analyzed in R [@citeR], primarily using the `tidyverse` [@tidy] package, while this report was compiled using R Markdown [@rmd].
+A major consequence of underrepresentation and gender and racial disparities in the workplace involves wage gaps. In 2019, a report from the tech job platform Hired found that 60% of men were offered higher salaries than their female counterparts for the same position at the same company, and that women were offered 3% less salary on average [@hired]. For many women who discovered they were being paid less than their male counterparts in the same position, the difference in salary was at least \$20,000. Moreover, the wage disparities grow when examining both gender and race. While White women and Asian women earn approximately \$0.97 for every dollar earned by White and Asian men, Black women and Latinx women earn \$0.89 and \$0.91 respectively [@hired]. This highlights the need to take an intersectional approach when examining wage gaps, as disparities exist even among women. 
+
+In this report, I utilized data from the 2020 Stack Overflow Developer Survey to examine representation in the tech industry, and to look for potential wage disparities based on gender and ethnicity. Multiple linear regression modelling was implemented to test the effects of gender and ethnicity on salary for tech professionals in the United States. The first section of the report provides an overview of the Developer Survey and its main results, particularly regarding the demographic characteristics of the respondents. The next sections discuss the process of building and implementing the regression model used to model salary, and its results. Finally, I discuss the implications of my findings in the broader context of representation and bias in the tech industry, and the limitations of my work and how it can be extended upon. The data was prepared and analyzed in R [@citeR], primarily using the `tidyverse` [@tidy] package, while this report was compiled using R Markdown [@rmd].
 
 
 # Data
+
 ## Overview of the Stack Overflow Developer Survey
+
 Stack Overflow is a popular public platform for individuals to ask and answer questions, share knowledge, or collaborate on a wide range of topics related to computer programming [@sewak2010finding]. The website boasts an average of 100 million user visits per month, and is used by individuals who code from a wide range of backgrounds, including professionals and enthusiasts alike [@stack]. In 2011, Stack Overflow launched their first Annual Developer Survey to better understand its user base. Since then, the annual survey has continued to grow alongside the website’s popularity, with the most recent 2020 survey garnering close to 65,000 responses from users in over 180 countries. While there is some variation in the questions asked from year to year, the Developer Survey covers a wide range of topics related to the experiences of developers, or other people who code. This includes demographic characteristics, questions about job hunting and satisfaction, compensation, programming experience, and the different languages and libraries developers are using. Every year Stack Overflow posts a report overviewing the main findings of the Developer Survey, as well as the full anonymized dataset to download which is available under the Open Database License (ODbL).
 
 I utilized data from the 2020 Developer Survey^[The overall results of the 2020 survey including more details about the survey’s methodology can be found here: https://insights.stackoverflow.com/survey/2020] to address my research questions regarding representation and income inequality in tech due to the popularity and usage of Stack Overflow among tech professionals and wide reach of the survey. Of course, this survey data is not necessarily representative of all tech professionals, as it was a voluntary survey and mainly limited to Stack Overflow users. Respondents were mainly sourced from onsite messaging, blog posts, email lists, Meta posts, banner ads, and social media posts, which might suggest users who were more engaged with Stack Overflow were more likely to notice the survey links and complete the survey. For the 2020 survey, Stack Overflow made additional efforts to diversify their sample by finding ways to advertise the survey outside of their own channels and target coders who may not frequent their websites, as well as promote the survey and provide outreach to underrepresented coders. According to the official report, this resulted in slightly more responses from underrepresented groups compared to previous year, however Stack Overflow acknowledged they still have work to do to increase representation in their sample. 
 
-The publicly posted dataset for the 2020 survey contains 64461 observations with 61 variables containing answers to the survey questions. Free response questions and questions with personally identifying information were not included in the dataset. A number of responses that Stack Overflow deemed “unqualified” for analysis were removed from the dataset, namely those where respondents took less than 3 minutes to complete the entire survey, which was estimated to take around 20 minutes to complete. Given the size of the dataset and range of respondents, I wanted to narrow down and focus on the effects of gender and ethnicity on income specifically for individuals living in the United States with a full-time employment status^[The survey ran in February of 2020 before the World Health Organization officially declared COVID-19 to be a worldwide pandemic, so factors involving employment status and income may have changed since then]. Of the 9765 respondents who reside in the United States and are full-time employees, 6860 also reported their income, gender, and ethnicity. Potential response bias should be considered when interpreting the results based on this data, as there may be underlying differences between respondents who reported these characteristics and those who did not. This affects both the extent to which the data is representative of tech professionals in the United States, as well as the generalizability of the model and its results. 
+The publicly posted dataset for the 2020 survey contains 64461 observations with 61 variables containing answers to the survey questions. Free response questions and questions with personally identifying information were not included in the dataset. A number of responses that Stack Overflow deemed “unqualified” for analysis were removed from the dataset, namely those where respondents took less than 3 minutes to complete the entire survey, which was estimated to take around 20 minutes to complete. Given the size of the dataset and range of respondents, I narrowed down the responses to focus on salaries for tech professionals living in the United States who are employed full time^[The survey ran in February of 2020 before the World Health Organization officially declared COVID-19 to be a worldwide pandemic, so factors involving employment status and income may have changed since then]. Of the 9765 respondents who reside in the United States and are full-time employees, 6368 also reported their income, gender, and ethnicity. Potential response bias should be considered when interpreting the results based on this data, as there may be underlying differences between respondents who reported these characteristics and those who did not. This affects both the extent to which the data is representative of tech professionals in the United States, as well as the generalizability of the model and its results. 
 
 
 ## Variables
+While the data from the Stack Overflow survey covers a wide range of questions about demographics and work characteristics which all provide valuable information about the tech industry, I focused my analysis on a select few variables of interest which relate to my research question. The variables I will be discussing and focusing on in my model are: salary, gender, ethnicity, years of professional coding experience, developer type and age. When reporting salary, respondents were also asked to indicate whether the salary they input was weekly, monthly, or yearly, as well the currency. These responses were converted to annual salaries in USD by Stack Overflow based on an assumption of 12 months and 50 working weeks. Stack Overflow also trimmed the top 2% highest annual salaries in the dataset and replaced them with a threshold value equivalent to two million USD. However, to help improve model performance by reducing extreme skewness, I removed cases with annual income over \$400,000. In addition to this, I excluded responses where the reported annual salary was less than \$10,000, as many of these responses appeared invalid and were unlikely to reflect true full time salaries. After removing these responses, the overall median salary was \$110,000 USD. 
 
-```{r gender, fig.cap="no", echo = FALSE}
+
+```{r salgen, fig.width=10, include=F}
+survey_clean %>%
+  ggplot(aes(x = Salary, fill = Gender)) +
+  geom_density(alpha = 0.5) +
+  theme(legend.position = "bottom")
+```
+
+```{r salarytable, echo = FALSE}
+survey_clean %>%
+  dplyr::group_by(Gender) %>%
+  dplyr::summarise(n(), median(Salary), mean(Salary), sd(Salary)) %>%
+  kbl(col.names = c( "Gender", "Respondents", "Median", "Mean", "Standard Deviation")) %>%
+  kable_minimal()
+
+survey_matched %>%
+  dplyr::group_by(Ethnicity, Gender) %>%
+  dplyr::summarise(n(), median(Salary), mean(Salary), sd(Salary)) %>%
+  kbl(col.names = c( "Ethnicity","Gender", "Respondents", "Median", "Mean", "Standard Deviation")) %>%
+  kable_minimal()
+```
+
+
+```{r gender, fig.cap="no", echo = FALSE, include=F}
 genderdf <- as.data.frame(tabyl(survey_clean$Gender, sort = TRUE)) %>%
   mutate(prop = round(percent*100, digits = 1)) %>%
   mutate(ypos = cumsum(prop)- 0.5*prop )
@@ -76,15 +124,15 @@ survey_clean %>%
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender)) + 
   coord_flip() + 
   theme_light() +
-  ylim(0, 4000) +
+  ylim(0, 4300) +
   labs(x = "Ethnicity") +
-  scale_fill_manual(values = c("#599bba", "#91c989", "#d498b0"), labels = c("Man", "Non-Binary", "Woman")) +
+  scale_fill_brewer(palette = "Set2") +
   theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
-  geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
-
+ labs(y = "Gender Identity") #+
+  #geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
 ```
 
-```{r ethnicitygen, echo=FALSE}
+```{r ethnicitygen, echo=FALSE, fig.cap="test"}
 survey_clean %>%
   filter(Gender == "Woman") %>%
   ggplot() + 
@@ -98,46 +146,184 @@ survey_clean %>%
   geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
 ```
 
+```{r yearscode, fig.cap="test"}
+survey_clean <- survey_clean[!is.na(survey_clean$YearsCodeProNew), ] 
+mean(survey_clean$YearsCodeProNew)
+
+survey_clean %>%
+  ggplot() +
+  geom_bar(aes(x = YearsCodeProNew, fill = Gender), stat = "count", position = "dodge") +
+  theme_light() +
+  theme(legend.position = "bottom")
+
+survey_clean$YearsCodeProCat <- cut(survey_clean$YearsCodeProNew, breaks = c(0,5,10,15,20,25,30,35,40,45,50,max(survey_matched$YearsCodeProNew)),
+                                      labels = c("Less than 5 years","5-9 years","10-14 years","15-19 years","20-24 years","25-29 years","30-34 years","35-39 years","40-44 years","45-49 years","50+"), include.lowest = TRUE)
+
+
+survey_matched %>%
+  ggplot(aes(x = YearsCodeProCat, y = Salary, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge")
+#survey_clean %>%
+  #dplyr::group_by(Gender) %>%
+  #dplyr::summarise(mean(YearsCodeProNew))
+
+#survey_clean %>%
+  #dplyr::group_by(Gender) %>%
+  #dplyr::summarise(mean(Age, na.rm=TRUE))
+```
+
+
+
+```{r devtype1,  fig.width=10, fig.height = 10, fig.cap="test"}
+survey_unnest %>%
+  ggplot(aes(x = fct_rev(fct_infreq(Gender)), y = Salary, fill = Gender)) +
+  geom_boxplot(width = .7) +
+  facet_wrap(~DevType, ncol = 3) +
+  scale_y_continuous(labels = dollar_format()) +
+  scale_x_discrete(name = "Gender Identity", labels = c("Non-Binary", "Woman", "Man")) +
+  coord_flip() +
+  theme_light() +
+  scale_fill_brewer(palette = "Set2") +
+    theme(legend.position = "none",
+          strip.background = element_blank(),
+          strip.text = element_text(colour = "black", size = "11"))
+
+```
+
+```{r devtype2, fig.cap="test"}
+survey_unnest %>%
+  ggplot(aes(x = fct_rev(fct_infreq(DevType)), fill = Gender)) +
+  geom_bar(position = "dodge", stat = "count") + 
+  coord_flip() +
+  scale_fill_brewer(palette = "Set2") +
+  theme_light() +
+  theme(legend.position = "bottom")
+```
+
+
 # Model
 
 ## Propensity Score Matching
 
-## Assumptions
+## Model
 
-## Model?
+\begin{equation} 
+  log(\frac{\hat{p}}{1 - \hat{p}}) = 
+  \beta_{0} + 
+  \beta_{1}x_{gender} + 
+  \beta_{2}x_{ethnicity} +
+  \beta_{3}x_{test} + 
+  \beta_{4}x_{state} + 
+  \beta_{5}x_{education} + 
+  \beta_{6}x_{hispanic}
+  (\#eq:lm)
+\end{equation} 
+
+
+```{r, fig.width=10, include = F}
+survey_matched <- survey_matched %>%
+  filter(Salary >= 30000)
+
+survey_matched$Ethnicity <- droplevels(survey_matched$Ethnicity)
+salary_model <- 
+  lm(log(Salary) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
+     data = survey_matched)
+
+salary_model2 <- 
+  lm(Salary ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
+     data = survey_matched)
+
+summary(salary_model)
+summary(salary_model2)
+
+RMSPE(salary_model$fitted.values, log(survey_matched$Salary))
+
+100 * (exp(0.6945963)-1)
+```
+
+```{r performance, fig.width = 20, fig.height = 10, fig.cap="test"}
+check_model(salary_model)
+```
+```{r, include = F}
+#RMSE model validation with train and testing data
+survey_matched2 <- survey_matched
+survey_matched2$Salary <- log(survey_matched2$Salary)
+
+set.seed(888) 
+training <- sample(nrow(survey_matched2), floor(nrow(survey_matched2)*0.7)) 
+train <- survey_matched2[training,]
+test <- survey_matched2[-training,]
+
+salary_model_train <- 
+  lm(Salary ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
+     data = train) 
+
+prediction <- predict(salary_model, test)
+
+rmse(test$Salary, prediction)
+RMSPE(prediction, test$Salary)
+MedianAPE(prediction, test$Salary)
+```
 
 # Results
-```{r, fig.width=10}
-check_model(income_model)
-summary(income_model)
 
-plot(income_model, 1)
-bptest(income_model) #p > 0.05 constant variance
-shapiro.test(resid(income_model)) #p > 0.05 means residuals not normally distributed
-skewness(survey_matched$Income) #heavily skewed
-```
-
-```{r, fig.width=10}
-tukey <- transformTukey(survey_matched$Income, plotit = FALSE) #rcompanion
-skewness(survey_matched$Income)
-
-income_model_new <- 
-  lm((-1*Income^(-0.8)) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + DevType + YearsCodePro, 
-     data = survey_matched)
-summary(income_model_new)
-check_model(income_model_new)
-shapiro.test(resid(income_model_new)) #p > 0.05 means residuals not normally distributed
-
-income_model_new2 <- 
-  lm((-1*Income^(-0.8)) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + DevType + YearsCodePro + YearsCodePro * Gender, 
-     data = survey_matched)
-summary(income_model_new2) #After accounting for the interaction between professional exp and gender, gender no lomger significant
-
+```{r fig.width=6, echo = F}
+#figure of coefficients with error bars present (95% CI)
+coefest <- broom::tidy(salary_model, conf.int = T) 
+coefest <- coefest[-1,] #removing intercept for plotting
+#maybe find a way to bold the significant terms
+coefest %>% ggplot(aes(estimate, term)) +
+  geom_point() +
+  geom_errorbar(aes(xmin = conf.low, xmax = conf.high)) +
+  labs(title = "Coefficient Estimates",
+       x = "Coefficient Estimates", y = "Attributes") +
+    theme_minimal() 
 ```
 
 
+```{r, echo = F}
+salary_model %>%
+  tbl_regression(pvalue_fun = ~style_pvalue(.x, digits = 2), intercept=T) %>%
+  bold_p(t = 0.01) %>%
+  bold_labels() %>%
+  as_flex_table() %>%
+  font(fontname = 'Times', part = "all") %>%
+  fontsize(size = 10.5, part = "body") %>%
+  fontsize(size = 7, part = "footer")
+```
 
-# Discussion
+
+```{r, fig.width=8}
+cat_plot(salary_model, YearsCodeProCat, Gender, 
+         geom = "line", 
+         colors = "Set2")
+
+cat_plot(salary_model, Ethnicity, Gender, 
+         geom = "line", 
+         colors = "Set2")
+
+survey_matched %>%
+  ggplot(aes(x = Ethnicity, y = mean(Salary))) +
+  geom_bar(stat = "identity")
+```
+
+```{r}
+survey_test %>%
+  dplyr::group_by(Gender, YearsCodeProCat) %>%
+  dplyr::summarise(n()) 
+
+survey_matched %>%
+  dplyr::group_by(Gender, YearsCodeProCat) %>%
+  dplyr::summarise(n()) 
+
+
+table(survey_matched$Ethnicity)
+```
+
+
+## Overview of Results
+
+## Limitations and Future Directions
 
 \newpage
 
@@ -146,7 +332,6 @@ summary(income_model_new2) #After accounting for the interaction between profess
 # Appendix {-}
 
 \newpage
-
 
 # References
 

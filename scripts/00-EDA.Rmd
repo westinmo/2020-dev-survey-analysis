@@ -65,12 +65,6 @@ filtered_data %>%
 ```
 
 ```{r}
-table(filtered_data$Ethnicity)
-
-table(survey_clean$Ethnicity)
-```
-
-```{r}
 table(survey_clean$Ethnicity)
 table(survey_clean2$DevType)
 ```
@@ -83,25 +77,16 @@ survey_clean2 %>%
 ```
 ```{r}
 survey_clean %>%
-  ggplot() + geom_density(aes(Income))
+  ggplot() +
+  geom_density(y = Salary, fill = Gender)
 ```
+
 ```{r}
 survey_unnest %>%
   ggplot() + geom_bar(aes(x = forcats::fct_rev(fct_infreq(DevType)), fill = Gender), stat = "count") + 
   theme(legend.position = "bottom") + coord_flip() 
 ```
 
-```{r}
-remove2 <- survey_clean %>%
-  filter(str_detect(Ethnicity, ";"))
 
-survey_clean3 <- survey_clean %>%
-  anti_join(remove2)
 
-survey_clean3 %>% 
-  ggplot() + geom_bar(aes(x = Ethnicity), stat = "count") + coord_flip()
-```
-```{r}
-class(survey_matched)
-```
 

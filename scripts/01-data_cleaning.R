@@ -14,7 +14,7 @@ library(visdat)
 library(janitor)
 library(questionr)
 library(plyr)
-
+library(broom)
 #Reading in Data
 survey_raw <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
 #survey schema outlining which questions correspond to each column name
@@ -24,16 +24,22 @@ schema <- read_csv(here::here("inputs/data/survey_results_schema.csv"))
 survey_clean <- survey_raw %>%
   filter(Country == "United States", 
          Employment == "Employed full-time",
-         ConvertedComp > 20000
-  )
-#6384 individuals in the United States who are Employed full-time after trimming very low and very high salaries
+         ConvertedComp < 400000,
+         ConvertedComp >= 10000
+  ) %>%
+  mutate(YearsCodeProNew = parse_number(YearsCodePro),) %>%
+  mutate(Age1stCode = parse_number(Age1stCode),) %>%
+  mutate(YearsCode = parse_number(YearsCode),)
+
+#9765 before removing salary
+#7071 individuals in the United States who are Employed full-time after trimming very low and very high salaries
 
 #Removing rows with NAs
 survey_clean <- survey_clean[!is.na(survey_clean$ConvertedComp), ] #7628 after removing NA income
 survey_clean <- survey_clean[!is.na(survey_clean$Gender), ] #7097 after removing NA gender
 survey_clean <- survey_clean[!is.na(survey_clean$Ethnicity), ] #6860 after removing NA Ethnicity
-survey_clean <- plyr::rename(survey_clean, c("ConvertedComp" = "Income"))
-#6860 reported their income, gender, and ethnicity
+survey_clean <- plyr::rename(survey_clean, c("ConvertedComp" = "Salary"))
+#6368 reported their salary, gender, and ethnicity
 
 #Gender
 #Re-categorizing gender responses into Man, Women, or Non-binary/genderqueer/gender non-conforming
@@ -52,8 +58,6 @@ multiple_eth <- survey_clean %>%
 
 survey_clean <- survey_clean %>%
   anti_join(multiple_eth)
-
-survey_clean$YearsCodePro <- as.integer(as.character(survey_clean$YearsCodePro))
 
 #Relabelling Indigenous
 survey_clean$Ethnicity <- case_when(
@@ -89,9 +93,28 @@ survey_clean <- survey_clean %>%
 survey_unnest <- survey_clean %>% 
   mutate(DevType = str_split(DevType, pattern = ";")) %>%
   unnest(DevType) #
+survey_unnest$DevType <- as.factor(survey_unnest$DevType)
+survey_unnest$DevType <-
+  fct_recode(survey_unnest$DevType, 
+             "Back-End Developer" = "Developer, back-end",
+             "Embedded Applications or Devices Developer" = "Developer, embedded applications or devices",
+             "Full-Stack Developer" = "Developer, full-stack",
+             "Mobile Developer" = "Developer, mobile",
+             "Site Reliability Engineer" = "Engineer, site reliability",
+             "Desktop or Enterprise Applications Developer" = "Developer, desktop or enterprise applications",
+             "Front-End Developer" =  "Developer, front-end",
+             "Game or Graphics Developer" =  "Developer, game or graphics",
+             "Data Engineer" = "Engineer, data",
+             "Data or Business Analyst" = "Data or business analyst",
+             "Database Administrator" = "Database administrator",
+             "DevOps Specialist" = "DevOps specialist",
+             "System Administrator" = "System administrator",
+             "Data Scientist or Machine Learning Specialist" =  "Data scientist or machine learning specialist"
+  )
+survey_unnest <- survey_unnest[!is.na(survey_unnest$DevType), ]
+
 
 write_csv(survey_clean, here::here("inputs/data/survey_clean.csv"))
 write_csv(survey_unnest, here::here("inputs/data/survey_unnest.csv"))
 
-
-
+table(survey_clean$DevType)
