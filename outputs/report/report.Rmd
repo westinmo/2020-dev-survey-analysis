@@ -22,7 +22,7 @@ bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 tinytex::reinstall_tinytex()
 library(tidyverse)
 library(reshape2)
@@ -36,13 +36,13 @@ library(plyr)
 library(kableExtra)
 library(qqplotr)
 library(MLmetrics)
-library(modelsummary)
-library(stargazer)
 library(gtsummary)
 library(flextable)
 library(jtools)
 library(interactions)
 library(RColorBrewer)
+library(gridExtra)
+library(forcats)
 
 survey_clean <- read_csv(here::here("inputs/data/survey_clean.csv")) 
 survey_unnest <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
@@ -79,12 +79,24 @@ The publicly posted dataset for the 2020 survey contains 64461 observations with
 While the data from the Stack Overflow survey covers a wide range of questions about demographics and work characteristics which all provide valuable information about the tech industry, I focused my analysis on a select few variables of interest which relate to my research question. The variables I will be discussing and focusing on in my model are: salary, gender, ethnicity, years of professional coding experience, developer type and age. When reporting salary, respondents were also asked to indicate whether the salary they input was weekly, monthly, or yearly, as well the currency. These responses were converted to annual salaries in USD by Stack Overflow based on an assumption of 12 months and 50 working weeks. Stack Overflow also trimmed the top 2% highest annual salaries in the dataset and replaced them with a threshold value equivalent to two million USD. However, to help improve model performance by reducing extreme skewness, I removed cases with annual income over \$400,000. In addition to this, I excluded responses where the reported annual salary was less than \$10,000, as many of these responses appeared invalid and were unlikely to reflect true full time salaries. After removing these responses, the overall median salary was \$110,000 USD. 
 
 
-```{r salgen, fig.width=10, include=F}
+```{r salgen, fig.width=10, echo = F}
+#brewer.pal(n = 8, name = "Set2")
+#green: #66C2A5
+#orange: #FC8D62
+#blue: #8DA0CB
+
 survey_clean %>%
-  ggplot(aes(x = Salary, fill = Gender)) +
-  geom_density(alpha = 0.5) +
-  theme(legend.position = "bottom")
+  ggplot(aes(x = Salary, color = Gender, fill = Gender)) +
+  geom_density(alpha = 0.2, size = 2) +
+  scale_x_continuous(labels = scales::dollar_format()) +
+  labs(x = "Annual Salary in USD", y = "Density", title = "Men Reported Higher Annual Salaries than Women and Non-Binary Respondents") +
+  theme_light() + 
+  scale_color_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
+  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold")) 
 ```
+
+
 
 ```{r salarytable, echo = FALSE}
 survey_clean %>%
@@ -92,89 +104,107 @@ survey_clean %>%
   dplyr::summarise(n(), median(Salary), mean(Salary), sd(Salary)) %>%
   kbl(col.names = c( "Gender", "Respondents", "Median", "Mean", "Standard Deviation")) %>%
   kable_minimal()
-
-survey_matched %>%
-  dplyr::group_by(Ethnicity, Gender) %>%
-  dplyr::summarise(n(), median(Salary), mean(Salary), sd(Salary)) %>%
-  kbl(col.names = c( "Ethnicity","Gender", "Respondents", "Median", "Mean", "Standard Deviation")) %>%
-  kable_minimal()
 ```
 
 
-```{r gender, fig.cap="no", echo = FALSE, include=F}
+```{r gender, echo = FALSE, include=F}
 genderdf <- as.data.frame(tabyl(survey_clean$Gender, sort = TRUE)) %>%
   mutate(prop = round(percent*100, digits = 1)) %>%
   mutate(ypos = cumsum(prop)- 0.5*prop )
-
-colours <- c("#d498b0", "#91c989", "#599bba")
-
-ggplot(genderdf, aes(x="", y=prop, fill = forcats::fct_rev(`survey_clean$Gender`))) +
-  geom_bar(stat="identity") +
-  coord_polar("y", start=0) +
-  theme_void() +
-  labs(fill = "Gender Identity", title = "The Majority of Tech Professionals are Men") +
-  geom_text(aes(x=1.6, y = ypos, label = percent(percent)), color = "black", size=3) +
-  scale_fill_manual(values = colours, labels = c("Woman", "Non-Binary", "Man")) + 
-  theme(plot.title = element_text(face = "bold"))
 ```
 
-```{r ethnicity, fig.cap="No", echo = FALSE}
-survey_clean %>%
+```{r ethnicity, fig.cap="No", echo = FALSE, fig.height=7}
+eth <- survey_clean %>%
   ggplot() + 
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender)) + 
   coord_flip() + 
   theme_light() +
   ylim(0, 4300) +
-  labs(x = "Ethnicity") +
-  scale_fill_brewer(palette = "Set2") +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
- labs(y = "Gender Identity") #+
-  #geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
-```
+  labs(x = "Ethnicity", y = "Number of Respondents", title = "The Majority of Respondents are of White or European Descent") +
+  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 10)) 
 
-```{r ethnicitygen, echo=FALSE, fig.cap="test"}
-survey_clean %>%
+ethW <- survey_clean %>%
   filter(Gender == "Woman") %>%
   ggplot() + 
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender), stat = "count") + 
   coord_flip() + 
   theme_light() +
   ylim(0, 400) +
-  labs(x = "Ethnicity") +
-  scale_fill_manual(values = c("#d498b0"), labels = c("Woman")) +
+  labs(x = "Ethnicity", y = "Number of Respondents") +
+  scale_fill_manual(values = "#8DA0CB") +
   theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
   geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
+  
+grid.arrange(eth, ethW)
 ```
 
-```{r yearscode, fig.cap="test"}
-survey_clean <- survey_clean[!is.na(survey_clean$YearsCodeProNew), ] 
-mean(survey_clean$YearsCodeProNew)
+```{r saleth, echo = F, fig.cap="test"}
+survey_clean$Ethnicity <- as.factor(survey_clean$Ethnicity)
 
 survey_clean %>%
-  ggplot() +
-  geom_bar(aes(x = YearsCodeProNew, fill = Gender), stat = "count", position = "dodge") +
+  filter(Gender != "Non-binary, genderqueer, or gender non-conforming") %>%
+  dplyr::group_by(Gender, Ethnicity) %>%
+  dplyr::summarise(n(), median(Salary), mean(Salary)) %>% 
+  ungroup() %>%
+  ggplot(aes(x = forcats::fct_reorder(Ethnicity, `median(Salary)`), y = `median(Salary)`)) + 
+  geom_point(aes(color = Gender), size = 3) +
+  geom_line(alpha = 0.5, size = 1.2) +
+  scale_y_continuous(labels = scales::dollar_format()) +
   theme_light() +
-  theme(legend.position = "bottom")
+  labs(x = "Ethnicity", y = "Median Salary in USD", title = "Salary Differences Based on Ethnicity Differ by Gender") +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold")) + 
+  coord_flip() +
+  scale_color_manual(values = c("#FC8D62", "#8DA0CB"))
+```
 
-survey_clean$YearsCodeProCat <- cut(survey_clean$YearsCodeProNew, breaks = c(0,5,10,15,20,25,30,35,40,45,50,max(survey_matched$YearsCodeProNew)),
-                                      labels = c("Less than 5 years","5-9 years","10-14 years","15-19 years","20-24 years","25-29 years","30-34 years","35-39 years","40-44 years","45-49 years","50+"), include.lowest = TRUE)
+```{r yearscode, fig.cap="test", fig.height=10, echo = F}
+survey_clean <- survey_clean[!is.na(survey_clean$YearsCodeProNew), ] 
 
+m <- survey_clean %>%
+  filter(Gender == "Man") %>%
+  ggplot() +
+  geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#FC8D62") +
+  theme_light() + scale_y_continuous(labels = percent) +
+  labs(x = "Years of Professional Coding Experience", y = "% of Male Respondents", title = "Most Developers with Greater Years of Professional Coding Experience are Male") +
+  theme(plot.title = element_text(face = "bold"))
 
-survey_matched %>%
-  ggplot(aes(x = YearsCodeProCat, y = Salary, fill = Gender)) +
-  geom_bar(stat = "identity", position = "dodge")
-#survey_clean %>%
-  #dplyr::group_by(Gender) %>%
-  #dplyr::summarise(mean(YearsCodeProNew))
+f <- survey_clean %>%
+  filter(Gender == "Woman") %>%
+  ggplot() +
+  geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#8DA0CB") +
+  theme_light() + scale_y_continuous(labels = percent) +
+    labs(x = "Years of Professional Coding Experience", y = "% of Female Respondents")
 
-#survey_clean %>%
-  #dplyr::group_by(Gender) %>%
-  #dplyr::summarise(mean(Age, na.rm=TRUE))
+nb <- survey_clean %>% 
+  filter(Gender == "Non-binary, genderqueer, or gender non-conforming") %>%
+  ggplot() +
+  geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#66C2A5") +
+  theme_light() + scale_y_continuous(labels = percent) +
+    labs(x = "Years of Professional Coding Experience", y = "% of Non-Binary Respondents")
+
+grid.arrange(m, f, nb)
+```
+
+```{r}
+survey_clean %>%
+  filter(Gender != "Non-binary, genderqueer, or gender non-conforming") %>%
+  dplyr::group_by(Gender, YearsCodeProNew) %>%
+  dplyr::summarise(median(Salary), n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = YearsCodeProNew, y = `median(Salary)`, color = Gender)) +
+  geom_point(size = 1.3, alpha = 0.8) +
+    geom_smooth(se = F, alpha = 0.3) +
+  scale_color_manual(values = c("#FC8D62", "#8DA0CB")) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+    labs(x = "Years of Professional Coding Experience", y = "Median Salary in USD", title = "Gender-based Salary Gap Widens with More Years of Professional Coding Experience") +
+    theme_light() +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 11)) 
+
 ```
 
 
-
-```{r devtype1,  fig.width=10, fig.height = 10, fig.cap="test"}
+```{r devtype1,  fig.width=10, fig.height = 10, fig.cap="test", include=F}
 survey_unnest %>%
   ggplot(aes(x = fct_rev(fct_infreq(Gender)), y = Salary, fill = Gender)) +
   geom_boxplot(width = .7) +
@@ -183,21 +213,22 @@ survey_unnest %>%
   scale_x_discrete(name = "Gender Identity", labels = c("Non-Binary", "Woman", "Man")) +
   coord_flip() +
   theme_light() +
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
     theme(legend.position = "none",
           strip.background = element_blank(),
           strip.text = element_text(colour = "black", size = "11"))
-
+#ignore
 ```
 
-```{r devtype2, fig.cap="test"}
+```{r devtype2, fig.cap="test", fig.width=7}
 survey_unnest %>%
   ggplot(aes(x = fct_rev(fct_infreq(DevType)), fill = Gender)) +
   geom_bar(position = "dodge", stat = "count") + 
   coord_flip() +
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
   theme_light() +
-  theme(legend.position = "bottom")
+  labs(x = "Number of Respondents", y = "Developer Type", title = "Majority of Developers are Full-Stack, Back-End, and/or Front-End") +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 10))
 ```
 
 
@@ -205,26 +236,43 @@ survey_unnest %>%
 
 ## Propensity Score Matching
 
-## Model
+## Multiple Linear Regression Model
 
-\begin{equation} 
-  log(\frac{\hat{p}}{1 - \hat{p}}) = 
-  \beta_{0} + 
-  \beta_{1}x_{gender} + 
-  \beta_{2}x_{ethnicity} +
-  \beta_{3}x_{test} + 
-  \beta_{4}x_{state} + 
-  \beta_{5}x_{education} + 
-  \beta_{6}x_{hispanic}
-  (\#eq:lm)
-\end{equation} 
+
+$$
+\begin{aligned}
+    log(salary_{i}) =  
+    \beta_{0} + 
+    \beta_{1}gender_{i} + 
+    \beta_{2}ethnicity_{i} + 
+    \beta_{3}gender_{i}ethnicity_{i} + \\
+    \beta_{4}yearscodepro_{i} + 
+    \beta_{5}gender_{i}yearscodepro_{i} +
+    \beta_{6}edlevel_{i} + 
+    \beta_{7}devtype_{i} + \\
+    \beta_{8}age_{i} +
+    \epsilon_{ij}
+\end{aligned}
+$$
+
+The output term on the left-hand of the equation represents the response variable, salary. As the salary distribution in the dataset follows a log-normal distribution, a log transformation was applied to the salary variable to normalize the data. $\beta_{0}$ is the model’s intercept, which represents the mean salary when all predictor values are equal to 0, or categorical variables are at their reference levels. The other $\beta$ terms in the equation represent coefficients the model will compute for each corresponding predictor variable, which are the partial slopes of each predictor variable, and the response variable, salary. Finally, $\epsilon_{i}$ represents the model’s residual errors.
+
+* _Gender_
+* _Ethnicity_
+* _Gender\*Ethnicity_
+* _YearsCodePro_
+* _Gender\*YearsCodePro_
+* _EdLevel_
+* _DevType_
 
 
 ```{r, fig.width=10, include = F}
 survey_matched <- survey_matched %>%
   filter(Salary >= 30000)
 
-survey_matched$Ethnicity <- droplevels(survey_matched$Ethnicity)
+survey_matched$Ethnicity <- as.factor(survey_matched$Ethnicity) %>%
+  droplevels()
+
 salary_model <- 
   lm(log(Salary) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
      data = survey_matched)
@@ -241,7 +289,7 @@ RMSPE(salary_model$fitted.values, log(survey_matched$Salary))
 100 * (exp(0.6945963)-1)
 ```
 
-```{r performance, fig.width = 20, fig.height = 10, fig.cap="test"}
+```{r performance, fig.width = 10, fig.height = 10, fig.cap="test", echo=F}
 check_model(salary_model)
 ```
 ```{r, include = F}
@@ -267,7 +315,14 @@ MedianAPE(prediction, test$Salary)
 
 # Results
 
-```{r fig.width=6, echo = F}
+$$
+\begin{aligned}
+  100 * (e^{\beta_{j}} - 1) 
+\end{aligned}
+$$
+i think j is the # of attributes (columns) and i is the number of observations (rows)
+
+```{r coeff, fig.width=10, fig.height = 10, echo = F}
 #figure of coefficients with error bars present (95% CI)
 coefest <- broom::tidy(salary_model, conf.int = T) 
 coefest <- coefest[-1,] #removing intercept for plotting
@@ -275,57 +330,49 @@ coefest <- coefest[-1,] #removing intercept for plotting
 coefest %>% ggplot(aes(estimate, term)) +
   geom_point() +
   geom_errorbar(aes(xmin = conf.low, xmax = conf.high)) +
-  labs(title = "Coefficient Estimates",
+  labs(title = "Coefficient Estimates for Salary Model",
        x = "Coefficient Estimates", y = "Attributes") +
     theme_minimal() 
 ```
 
 
-```{r, echo = F}
+```{r regmodel, echo = F}
 salary_model %>%
-  tbl_regression(pvalue_fun = ~style_pvalue(.x, digits = 2), intercept=T) %>%
+  tbl_regression(pvalue_fun = ~style_pvalue(.x, digits = 2), 
+                 estimate_fun = ~style_number(.x, digits = 3),
+                 intercept=T) %>%
   bold_p(t = 0.01) %>%
+  add_glance_source_note(
+     label = list(
+      df.residual  ~ "Residual df",
+      adj.r.squared ~ "Adjusted R-Squared"
+  )) %>%
   bold_labels() %>%
   as_flex_table() %>%
   font(fontname = 'Times', part = "all") %>%
   fontsize(size = 10.5, part = "body") %>%
-  fontsize(size = 7, part = "footer")
+  fontsize(size = 7, part = "footer") 
 ```
 
 
-```{r, fig.width=8}
+```{r, fig.width=10, echo = FALSE}
 cat_plot(salary_model, YearsCodeProCat, Gender, 
          geom = "line", 
-         colors = "Set2")
-
-cat_plot(salary_model, Ethnicity, Gender, 
-         geom = "line", 
-         colors = "Set2")
-
-survey_matched %>%
-  ggplot(aes(x = Ethnicity, y = mean(Salary))) +
-  geom_bar(stat = "identity")
+         colors = c("#FC8D62", "#8DA0CB"),
+         x.label = "Years of Professional Coding Experience",
+         main.title = "Model Interaction Effects for Gender and Years of Professional Coding Experience")
 ```
 
-```{r}
-survey_test %>%
-  dplyr::group_by(Gender, YearsCodeProCat) %>%
-  dplyr::summarise(n()) 
-
-survey_matched %>%
-  dplyr::group_by(Gender, YearsCodeProCat) %>%
-  dplyr::summarise(n()) 
-
-
-table(survey_matched$Ethnicity)
-```
-
-
-## Overview of Results
+## Overview of Findings
 
 ## Limitations and Future Directions
 
 \newpage
+
+```{r}
+citation("flextable")
+```
+
 
 \appendix
 

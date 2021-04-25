@@ -16,6 +16,8 @@ survey_test <- survey_unnest
 survey_test$UndergradMajor <- as.factor(survey_test$UndergradMajor)
 survey_test$Gender <- as.factor(survey_test$Gender)
 survey_test$Ethnicity <- as.factor(survey_test$Ethnicity)
+survey_test$DevType <- as.factor(survey_test$DevType)
+
 
 
 #Replacing NAs for matching variables or removing NAs 
@@ -71,7 +73,6 @@ survey_matched$Ethnicity <- relevel(survey_matched$Ethnicity, ref = "White or of
   droplevels()
 survey_matched$EdLevel <- relevel(survey_matched$EdLevel, ref = "Bachelor's")
 survey_matched$DevType <- relevel(survey_matched$DevType, ref = "Full-Stack Developer")
-
 
 write_csv(survey_matched, here::here("inputs/data/survey_matched.csv"))
 

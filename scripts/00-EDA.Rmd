@@ -76,17 +76,67 @@ survey_clean2 %>%
   theme(legend.position = "bottom") + coord_flip() + labs(x = "Ethnicity", y = "Respondents")
 ```
 ```{r}
-survey_clean %>%
-  ggplot() +
-  geom_density(y = Salary, fill = Gender)
+#checking characteristics of excluded salaries (less than 10k and greater than 400k) - majority were white males
+multiple_eth <- survey %>%
+  filter(str_detect(Ethnicity, ";|Biracial|Multiracial"))
+
+survey <- survey %>%
+  anti_join(multiple_eth)
+
+survey$Gender <- case_when(str_detect(survey$Gender, "Non-binary, genderqueer, or gender non-conforming")
+                                ~ "Non-binary, genderqueer, or gender non-conforming",
+                                TRUE ~ survey$Gender)
+survey$Gender[survey$Gender == "Woman;Man" ] <- "Non-binary, genderqueer, or gender non-conforming"
+
+survey$Gender <- as.factor(survey$Gender) %>%
+  droplevels()
+
+survey <- survey[!is.na(survey$Gender), ] 
+survey <- survey[!is.na(survey$Ethnicity), ] 
+
+#Greater than 400k
+survey %>%
+  filter(Country == "United States", 
+         Employment == "Employed full-time",
+         ConvertedComp > 400000
+  ) %>%
+  dplyr::group_by(Ethnicity) %>%
+  dplyr::summarise(n()) 
+
+survey %>%
+  filter(Country == "United States", 
+         Employment == "Employed full-time",
+         ConvertedComp > 400000
+  ) %>%
+  dplyr::group_by(Gender) %>%
+  dplyr::summarise(n()) 
+
+#Less than 10k
+survey %>%
+  filter(Country == "United States", 
+         Employment == "Employed full-time",
+         ConvertedComp < 10000
+  ) %>%
+  dplyr::group_by(Ethnicity) %>%
+  dplyr::summarise(n()) 
+
+survey %>%
+  filter(Country == "United States", 
+         Employment == "Employed full-time",
+         ConvertedComp < 10000
+  ) %>%
+  dplyr::group_by(Gender) %>%
+  dplyr::summarise(n()) 
+  
 ```
 
 ```{r}
-survey_unnest %>%
-  ggplot() + geom_bar(aes(x = forcats::fct_rev(fct_infreq(DevType)), fill = Gender), stat = "count") + 
-  theme(legend.position = "bottom") + coord_flip() 
+ survey_clean %>%
+  dplyr::group_by(YearsCodeProNew, Gender) %>%
+  dplyr::summarise(median(Salary)) 
+  ggplot() +
+  geom_bar(aes(x = Gender, y = `median(Salary)`)) 
 ```
-
 
 
 

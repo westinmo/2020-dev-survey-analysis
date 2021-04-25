@@ -3,6 +3,7 @@ title: "Untitled"
 author: "Morgaine Westin"
 date: "18/04/2021"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -20,38 +21,30 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-read_csv(here::here("inputs/data/survey_unnest.csv")) 
-salary_model <- 
-  lm(log(Salary) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
-     data = survey_matched)
-huxreg(salary_model)
-```
 
-\begin{equation} 
-  log(salary_{ij}) = 
-  \beta_{0} + 
-  \beta_{1}x_{gender} + 
-  \beta_{2}x_{ethnicity} +
-  \beta_{3}x_{gender}x_{ethnicity} + 
-  \beta_{4}x_{yearscodepro} + 
-  \beta_{5}x_{gender}x_{yearscodepro} + 
-  \beta_{6}x_{edlevel} + 
-  \beta_{7}x_{devtype} + 
-  \beta_{8}x_{age} +
-  \epsilon_{ij}
-  (\#eq:lm)
-\end{equation} 
+Test \@ref(eq:lm)
 
-\begin{equation}
-(\#eq:lm)
-Outcome_{ij} = 
-\beta_{0} + 
-\beta_{1}gender_{i} + 
-\beta_{2}ethnicity_{i} + 
-\beta_{3}gender_{i}ethnicity_{i} 
-\epsilon_{ij}
+
+$$
+\begin{aligned}
+  100 * (e^{\beta_{i}} - 1) 
+\end{aligned}
+$$
 \end{equation}
+
+    \beta_{4}yearscodepro{i} + \\
+    \beta_{5}gender_{i}yearscodepro_{i} +
+    \beta_{6}edlevel{i} +
+    \beta_{7}devtype{i} +
+    \beta_{8}age{i} +
+    \epsilon_{i}
+
+
+
+
+
+
+
 
 
 
