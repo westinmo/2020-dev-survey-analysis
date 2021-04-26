@@ -47,11 +47,10 @@ scripts/00-EDA.nb.html
 # report log
 report.log
 
-#survey csvs 
-*survey_unnest.csv
 
 #shiny
 *rsconnect
 /shiny/survey_results_public.csv
+
 
 
