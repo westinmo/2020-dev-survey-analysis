@@ -27,11 +27,10 @@ survey_app  <- survey_app %>%
            MainBranch == "I am a developer by profession" | MainBranch == "I am not primarily a developer, but I write code sometimes as part of my work",
     ) %>% #selecting survey questions to include in the app (mostly ones that don't have too many levels to plot; focus on demographics)
     dplyr::select("Age", "Gender", "Ethnicity", "Sexuality", "Trans", "EdLevel", "UndergradMajor", "Age1stCode",
-           "MainBranch", "DevType", "Hobbyist", "YearsCode", "YearsCodePro", "OrgSize", "JobSat", "NEWOvertime", 
+           "MainBranch", "DevType", "Hobbyist", "YearsCodePro", "OrgSize", "JobSat", "NEWOvertime", 
            "SOAccount") %>%
     mutate(YearsCodePro = parse_number(YearsCodePro),) %>%
-    mutate(Age1stCode = parse_number(Age1stCode),) %>%
-    mutate(YearsCode = parse_number(YearsCode),)
+    mutate(Age1stCode = parse_number(Age1stCode),) 
 
 #cleaning gender
 survey_app$Gender <- case_when(str_detect(survey_app$Gender, "Non-binary, genderqueer, or gender non-conforming")
@@ -51,7 +50,12 @@ survey_app$DevType <- as.factor(survey_app$DevType)
 survey_app <- survey_app %>% 
     mutate(Ethnicity = str_split(Ethnicity, pattern = ";")) %>%
     unnest(Ethnicity) #
+
+survey_app$Ethnicity <- case_when(
+    str_detect(survey_app$Ethnicity, "Indigenous") ~ "Indigenous", TRUE ~ survey_app$Ethnicity)
+
 survey_app$Ethnicity <- as.factor(survey_app$Ethnicity)
+
 
 #cleaning sexuality
 survey_app <- survey_app %>% 
@@ -65,7 +69,18 @@ survey_app <- plyr::rename(survey_app, c("EdLevel" = "Education", "OrgSize" = "O
                                           "JobSat" = "JobSatisfaction", "NEWOvertime" = "HowOftenOvertime",
                                           "SOAccount" = "StackOverflowAccount", "Trans" = "Transgender", 
                                           "DevType" = "DeveloperType", "Hobbyist" = "CodeHobbyist",
-                                         "YearsCodePro" = "YearsProfessionalCodingExp", "YearsCode" = "YearsCodingExp"))
+                                         "YearsCodePro" = "YearsProfessionalCodingExp"))
+
+#renaming education levels (too long in graph)
+survey_app$Education <- as.factor(survey_app$Education)
+survey_app$Education <- fct_recode(survey_app$Education, #renaming for graph clarity
+               "Associate Degree" = "Associate degree (A.A., A.S., etc.)",
+               "Bachelor's Degree" = "Bachelor’s degree (B.A., B.S., B.Eng., etc.)",
+               "Master's Degreer" = "Master’s degree (M.A., M.S., M.Eng., MBA, etc.)",
+               "Doctoral Degree" = "Other doctoral degree (Ph.D., Ed.D., etc.)",
+               "Professional Degree" =  "Professional degree (JD, MD, etc.)",
+               "Secondary School" =  "Secondary school (e.g. American high school, German Realschule or Gymnasium, etc.)"
+    )
 
 #dataset for Salary
 #survey_app2 <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
@@ -127,9 +142,10 @@ server <- function(input, output) {
             theme_light() +
             theme(axis.title=element_text(face="bold"), 
                   legend.position="bottom", 
-                  title =element_text(face="bold")) +
-            labs(y = "# of Responses"), height = 450) %>%
-            layout(legend = list(orientation = "h", x = 0.2, y = -0.2))
+                  title =element_text(face="bold"),
+                  legend.title = element_blank()) +
+            labs(y = "# of Responses")) %>%
+            layout(legend = list(orientation = "h", x = 0.4, y = -0.2))
     })
     output$surveyplot2 <- renderPlotly({
         # generate bins based on input$bins from ui.R
