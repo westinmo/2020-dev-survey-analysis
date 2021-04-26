@@ -47,7 +47,11 @@ scripts/00-EDA.nb.html
 # report log
 report.log
 
-#survey csvs (original can be downloaded from stack overflow website)
-*survey_results_public.csv
+#survey csvs 
+*survey_unnest.csv
 
+#shiny
 *rsconnect
+/shiny/survey_results_public.csv
+
+
