@@ -39,7 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # EDA-notebook-html
-.00-EDA.nb.html
+00-EDA.nb.html
 
 # DS store
 .DS_Store
@@ -48,4 +48,4 @@ vignettes/*.pdf
 report.log
 
 #survey csvs (original can be downloaded from stack overflow website)
-*.survey_results_public.csv
+inputs/data/survey_results_public.csv
