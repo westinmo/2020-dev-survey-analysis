@@ -54,5 +54,7 @@ report.log
 
 #survey csvs 
 *survey_unnest.csv
+*survey_clean.csv
+*survey_matched.csv
 
 
