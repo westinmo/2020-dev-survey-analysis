@@ -42,7 +42,7 @@ vignettes/*.pdf
 scripts/00-EDA.nb.html
 
 # DS store
-*.DS_Store
+**/.DS_Store
 
 # report log
 report.log
