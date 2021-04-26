@@ -6,7 +6,7 @@
 # Contact: morgaine.westin@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: 
-# - Must have 2020 SO Dev Survey data downloaded and saved in /inputs/data/ 
+# - Must have 2020 SO Dev Survey data and schema downloaded and saved in /inputs/data/ 
 
 library(tidyverse)
 library(here)
@@ -15,8 +15,8 @@ library(visdat)
 library(janitor)
 library(plyr)
 library(broom)
-table(survey_raw$EdLevel)
-#Reading in Data
+
+#Reading in Data 
 survey_raw <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
 #survey schema outlining which questions correspond to each column name
 schema <- read_csv(here::here("inputs/data/survey_results_schema.csv"))
