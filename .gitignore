@@ -39,7 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # EDA-notebook-html
-00-EDA.nb.html
+scripts/00-EDA.nb.html
 
 # DS store
 .DS_Store
