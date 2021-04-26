@@ -8,6 +8,10 @@ output:
   latex_engine: default
 abstract: 'Despite promises from prominent companies to improve representation and diversity in the workforce, representation of women and racial minorities in the tech industry continues to be a prominent issue. A serious consequence of gender and racial inequalities in the workforce is the wage gap, in which women and women of colour in particular receive lower salaries than their male counterparts. Using data from the 2020 Stack Overflow Developer Survey, multiple linear regression was performed to model differences in salaries among tech professionals based on gender, while taking into consideration the effects of how gender may interact with other factors such as ethnicity and years of experience. Although there were no differences in reported salaries between men and women with less years of professional coding experience, women with 20-30 years of experience reported significantly lower salaries than men with similar levels of experience, highlighting concerns about long-term retention for women in the tech industry and the underrepresentation of women in senior-level positions.'
 thanks: 'Code and data are available at: https://github.com/westinmo/2020-dev-survey-analysis.'
+header-includes:
+- \usepackage{float} #use the 'float' package
+- \floatplacement{figure}{H} #make every figure with caption = h
+- \usepackage{longtable}
 toc: false
 bibliography: references.bib
 ---
@@ -64,10 +68,12 @@ The publicly posted dataset for the 2020 survey contains 64461 observations with
 
 
 ## Variables
-While the data from the Stack Overflow survey covers a wide range of questions about demographics and work characteristics which all provide valuable information about the tech industry, I focused my analysis on a select few variables of interest which relate to my research question. The variables I will be discussing and focusing on in my model are: salary, gender, ethnicity, years of professional coding experience, developer type and age. When reporting salary, respondents were also asked to indicate whether the salary they input was weekly, monthly, or yearly, as well the currency. These responses were converted to annual salaries in USD by Stack Overflow based on an assumption of 12 months and 50 working weeks. Stack Overflow also trimmed the top 2% highest annual salaries in the dataset and replaced them with a threshold value equivalent to two million USD. However, to help improve model performance by reducing extreme skewness, I removed cases with annual income over \$400,000. In addition to this, I excluded responses where the reported annual salary was less than \$10,000, as many of these responses appeared invalid and were unlikely to reflect true full time salaries. After removing these responses, the overall median salary was \$110,000 USD. 
 
+While the data from the Stack Overflow survey covers a wide range of questions about demographics and work characteristics which all provide valuable information about the tech industry, I focused my analysis on a select few variables of interest which relate to my research question. The variables I will be discussing and focusing on in my model are: salary, gender, ethnicity, and years of professional coding experience, while other variables such as developer type, age, and education level will be controlled for. When reporting salary, respondents were also asked to indicate whether the salary they input was weekly, monthly, or yearly, as well the currency. These responses were converted to annual salaries in USD by Stack Overflow based on an assumption of 12 months and 50 working weeks. Stack Overflow also trimmed the top 2% highest annual salaries in the dataset and replaced them with a threshold value equivalent to two million USD. However, to help improve model performance by reducing extreme skewness, I removed cases with annual income over \$400,000^[252 responses with annual salaries over $400,000 were removed, the majority of which were White males]. In addition to this, I excluded responses where the reported annual salary was less than \$10,000, as many of these responses appeared invalid and were unlikely to reflect true full time salaries^[17 responses with annual salaries under \$10,000 were removed, and the annual salaries of all except one case were under \$500. Again, the majority of these respondents were White males.]. After removing these responses, the overall median salary was \$110,000 USD. 
 
-```{r salgen, fig.width=10, fig.height = 7, echo = F, fig.cap="Salary Distributions for Full-Time Developers by Gender"}
+Respondents were asked to report their gender identity by selecting one or more of the following options: Woman, Man, Non-binary, genderqueer, or gender non-conforming, a text-entry option, and a non-response option. Out of the respondents who reported their gender identity, 87.5% identified as male, 10.4% identified as female, and 2.1% identified as non-binary, genderqueer, or gender non-conforming. As expected, female and non-binary respondents are grossly underrepresented in this sample, although there was an increase in responses from these groups compared to surveys from previous years. Reports from the National Center for Women & Information Technology [@NCWIT] and the Pew Research Center [@pew] estimate women hold around 25% of tech and computing jobs in the U.S., which suggests the numbers from the Stack Overflow survey may be an underestimate of the true number of women in the tech workforce and the results may not be entirely representative of that population. Distributions of salaries by gender and summary statistics are shown in Figure \@ref(fig:salgen) and Table \@ref(tab:salarytable).
+
+```{r salgen, fig.width=10, fig.height = 5, echo = F, fig.cap="Salary Distributions for Full-Time Developers by Gender"}
 #brewer.pal(n = 8, name = "Set2")
 #green: #66C2A5
 #orange: #FC8D62
@@ -85,23 +91,27 @@ survey_clean %>%
 ```
 
 
-
 ```{r salarytable, echo = FALSE}
 survey_clean %>%
   dplyr::group_by(Gender) %>%
   dplyr::summarise(n(), median(Salary), mean(Salary), sd(Salary)) %>%
-  kbl(col.names = c( "Gender", "Respondents", "Median", "Mean", "Standard Deviation")) %>%
+  kbl(caption = "Summary Statistics for Salaries of United States Tech Workers",
+      col.names = c( "Gender", "Respondents", "Median", "Mean", "Standard Deviation")) %>%
   kable_minimal()
 ```
 
+On average, median reported salaries for men were higher than they are for women and non-binary individuals, whose median reported salaries were both \$100,000 USD. Non-binary respondents show the broadest range of salaries, and show higher mean salaries along with men compared to the salaries of women. This can be seen on the tail end of the density graph in Figure \@ref(fig:salgen) where more individuals identifying as male or non-binary reported salaries on the higher end (upwards of \$200,000 USD) compared to women. These salary distributions by gender are similar to those found in a previous analysis of the 2019 Stack Overflow Developer Survey [@silge2019], which found the reported median salary of men was around \$8,000 higher than that of women and non-binary respondents, who also reported similar salaries. While we can clearly see differences in salaries based on gender, whether or not these are meaningful differences is yet to be seen, as there appears to be a complex relationship between gender and salary in which a number of other factors need to be considered as well.  
 
-```{r gender, echo = FALSE, include=F}
-genderdf <- as.data.frame(tabyl(survey_clean$Gender, sort = TRUE)) %>%
-  mutate(prop = round(percent*100, digits = 1)) %>%
-  mutate(ypos = cumsum(prop)- 0.5*prop )
-```
+### Ethnicity
 
-```{r ethnicity, fig.cap="Distribution of Respondents' Ethicities by Gender", echo = FALSE, fig.height=7, fig.width=8}
+To measure ethnicity, respondents were asked to select all options that applied to them from a predefined list of responses, along with text-entry and non-response options. To simplify analysis and avoid the overweighting of certain responses, I filtered out respondents who selected more than one ethnicity.^[This resulted in 494 respondents being removed, the majority of which were male] The distribution of respondents' ethnicities by gender are shown in Figure \@ref(fig:ethnicity), with the bottom chart focusing on the ethnicities of the women in the sample. 
+
+Consistent with previous reports about racial representation in tech, an overwhelming number of respondents reported being White or of European descent. Respondents who identified as Indigenous, which included those who are Native American, Pacific Islander, or Indigenous Australian, were the least represented group in this sample. Interestingly, respondents identifying as Hispanic or Latinx were the third largest group despite reports that they are underrepresented in tech compared to other groups such as East Asians. Notably, in this subset of the sample there were no Indigenous women, and the sample sizes for non-White women were extremely small. Again, while a number of responses were removed prior to this analysis, the distribution of respondents' ethnicities is generally consistent with those in the entire dataset, as well as survey results from previous years.
+
+Median salaries organized by ethnicity and gender are shown in Figure \@ref(fig:saleth). For respondents who identified as White, South Asian, Middle Eastern, and East Asian, the median salaries for males were higher than their female counterparts. The opposite was true for respondents who identified as Southeast Asian or Hispanic/Latinx, where median salaries were higher for women. Note that there were no Indigenous women in this group, and that median salaries for Black men and women were the same. After Indigenous men, White women had the lowest median salaries compared to the other groups. However, this could be attributed to the fact that the majority of women in the sample were White and sample sizes for the other women in this group were very small, and women were overall more likely to have less professional coding experience, resulting in lower salaries.
+
+```{r ethnicity, fig.cap="Distribution of Respondents' Ethicities by Gender", echo = FALSE, fig.height=8, fig.width=8}
+#full ethnicity distribution
 eth <- survey_clean %>%
   ggplot() + 
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender)) + 
@@ -113,6 +123,7 @@ eth <- survey_clean %>%
   theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 10),
         legend.text=element_text(size=8), legend.title = element_text(size=10))
 
+#ethnicity distribution for women only
 ethW <- survey_clean %>%
   filter(Gender == "Woman") %>%
   ggplot() + 
@@ -120,18 +131,20 @@ ethW <- survey_clean %>%
   coord_flip() + 
   theme_light() +
   ylim(0, 400) +
-  labs(x = "Ethnicity", y = "Number of Respondents") +
+  labs(x = "Ethnicity", y = "Number of Female Respondents") +
   scale_fill_manual(values = "#8DA0CB") +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank(),
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold"),
         legend.text=element_text(size=8), legend.title = element_text(size=10)) +
   geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
-  
+
+#combining plots
 grid.arrange(eth, ethW)
 ```
 
 ```{r saleth, echo = F, fig.cap="Differences between Median Salaries for Men and Women by Ethnicity", fig.width=8}
 survey_clean$Ethnicity <- as.factor(survey_clean$Ethnicity)
 
+#cleveland dot plot comparing differences for median salary by gender
 survey_clean %>%
   filter(Gender != "Non-binary, genderqueer, or gender non-conforming") %>%
   dplyr::group_by(Gender, Ethnicity) %>%
@@ -148,33 +161,44 @@ survey_clean %>%
   scale_color_manual(values = c("#FC8D62", "#8DA0CB"))
 ```
 
-```{r yearscode, fig.cap="Proportion of Male, Female, and Non-Binary Respondents' Years of Professional Coding Experience", fig.height=10, echo = F}
+### Years of Professional Coding Experience
+
+While there were no questions on the survey which directly measured professional industry experience in years, the next closest measure assessed on the survey was a question asking how many years the respondent has been coding professionally as part of their job, not including years spent coding in school or as a hobby. As the vast majority of respondents who are employed full time reported being a developer by profession, with the rest of respondents reporting they code sometimes for their job, the number of years spent coding professionally is a good indicator of how long the respondent has been working in a tech position. Additionally, the majority of the specific job positions discussed in the next section likely require coding knowledge. However, one thing to keep in mind is that this variable does not indicate how long the respondent has been in their particular job position at a specific company, but is instead an overall estimate of how long they might have been working in the tech industry as a whole. The distribution of years of coding experience by gender is shown in Figure \@ref(fig:yearscode). 
+
+The majority of the respondents have been coding professionally for less than 10 years, with a large portion having less than 5 years of professional experience. This suggests many of the respondents are newer to the tech industry, and some may be holding entry-level positions. The average years of coding experience for men (mean = 9.9 years) is slightly higher than it is for women (mean = 7 years) and non-binary individuals (mean = 6.6 years)^[The mean age for men and women are 33 and 32 years respectively, and mean age for non-binary individuals is 30]. The figure indicates that larger proportions of female and non-binary respondents are newer to the industry and reported three years or less of professional coding experience compared to men. These results are similar to the Stack Overflow survey results from previous years which have shown women to be less experienced in terms of years spent coding professionally, and are more likely than men to have three years of coding experience or less [@stack2019]. As we look past the 20-25 year mark, the number of women and non-binary respondents appears to drop off, and we see men are more likely to have more years of professional experience. This is consistent with previous work on retention in the tech industry which has shown women are more likely to leave tech positions than men [@techleave], which would result in less women with greater years of experience. 
+
+```{r yearscode, fig.cap="Proportion of Male, Female, and Non-Binary Respondents' Years of Professional Coding Experience", fig.height=8, echo = F}
 survey_clean <- survey_clean[!is.na(survey_clean$YearsCodeProNew), ] 
 
+#3 separate graphs examining proportion of men, women, and non-binary respondents for each year of exp
 m <- survey_clean %>%
   filter(Gender == "Man") %>%
   ggplot() +
   geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#FC8D62") +
   theme_light() + scale_y_continuous(labels = percent) +
   labs(x = "Years of Professional Coding Experience", y = "% of Male Respondents", title = "Most Developers with Greater Years of Professional Coding Experience are Male") +
-  theme(plot.title = element_text(face = "bold", size = 10))
+  theme(plot.title = element_text(face = "bold", size = 10), axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10))
 
 f <- survey_clean %>%
   filter(Gender == "Woman") %>%
   ggplot() +
   geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#8DA0CB") +
   theme_light() + scale_y_continuous(labels = percent) +
-    labs(x = "Years of Professional Coding Experience", y = "% of Female Respondents")
+    labs(x = "Years of Professional Coding Experience", y = "% of Female Respondents") +
+  theme(axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10))
 
 nb <- survey_clean %>% 
   filter(Gender == "Non-binary, genderqueer, or gender non-conforming") %>%
   ggplot() +
   geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#66C2A5") +
   theme_light() + scale_y_continuous(labels = percent) +
-    labs(x = "Years of Professional Coding Experience", y = "% of Non-Binary Respondents")
+    labs(x = "Years of Professional Coding Experience", y = "% of Non-Binary Respondents") + 
+  theme(axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10))
 
 grid.arrange(m, f, nb)
 ```
+
+The relationship between years of professional coding experience and median annual salary by gender is shown in Figure \@ref(fig:salexp). 
 
 ```{r salexp, fig.cap="Relationship between Median Salary and Years of Professional Coding Experience", echo = F, fig.width=8}
 survey_clean %>%
@@ -190,21 +214,16 @@ survey_clean %>%
     labs(x = "Years of Professional Coding Experience", y = "Median Salary in USD", title = "Gender-based Salary Gap Widens with More Years of Professional Coding Experience") +
     theme_light() +
   theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 11)) 
-
-```
-```{r devtype1, fig.cap="Distribution of Developer Types", fig.width=8, echo = F}
-survey_unnest %>%
-  ggplot(aes(x = fct_rev(fct_infreq(DevType)), fill = Gender)) +
-  geom_bar(position = "dodge", stat = "count") + 
-  coord_flip() +
-  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
-  theme_light() +
-  labs(x = "Number of Respondents", y = "Developer Type", title = "The Majority of Developers are Full-Stack, Back-End, and/or Front-End") +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 11))
 ```
 
+According to this figure, men and women with less than 5 years of experience have similar salaries, with women making slightly more than men. However, while median salaries for men continue on a relatively steady upwards trajectory as they gain more years of experience, women’s salaries appear to drop, and we see significant gaps between men and women’s salaries between 10 and 35 years of experience. This suggests that while men and women may start off with similar salaries, the wage gap widens over time and is more noticeable at certain levels of experience. 
 
-```{r devtype2,  fig.width=10, fig.height = 10, fig.cap="Salary Distributions for Developer Types", echo = F}
+### Developer Type
+
+The Developer Type attribute in the dataset contains information about the type of job positions respondents hold. Developer type is discussed here as certain roles are compensated more than others, and gender distributions may differ depending on the role. There were a total of 23 options to select from, and respondents were asked to select all which best apply to them, resulting in a number of responses with unique combinations of these options. As a significant portion of respondents selected two or more positions, these responses were split and unnested to facilitate the analysis, however a limitation of this method is that the same respondents will now appear multiple times in the datasets which may have various implications when drawing conclusions from the analysis. To further narrow down the data and focus on individual level contributors in the tech industry, respondents holding positions such as academic researchers and scientists, as well as those in upper level management positions such as senior executives and VPs were filtered out. Figure \@ref(fig:devtype2) displays the salary distributions for each position type by gender and Figure \@ref(fig:devtype1) displays the distribution of developer positions by gender. 
+
+```{r devtype2,  fig.width=12, fig.height = 12, fig.cap="Salary Distributions for Developer Types", echo = F}
+#boxplot for developty types and salary
 survey_unnest %>%
   ggplot(aes(x = fct_rev(fct_infreq(Gender)), y = Salary, fill = Gender)) +
   geom_boxplot(width = .7) +
@@ -217,15 +236,42 @@ survey_unnest %>%
   labs(title = "Men's Salaries are Highest for Most Developer Types") +
     theme(legend.position = "none",
           strip.background = element_blank(),
-          strip.text = element_text(colour = "black", size = "11"))
+          strip.text = element_text(colour = "black", size = "11"),  
+                                    plot.title = element_text(face = "bold",size = 13))
 ```
 
+
+```{r devtype1, fig.cap="Distribution of Developer Types", fig.width=7.5, echo = F}
+survey_unnest %>%
+  ggplot(aes(x = fct_rev(fct_infreq(DevType)), fill = Gender)) +
+  geom_bar(position = "dodge", stat = "count") + 
+  coord_flip() +
+  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
+  theme_light() +
+  labs(x = "Number of Respondents", y = "Developer Type", title = "The Majority of Developers are Full-Stack, Back-End, and/or Front-End") +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 9.5))
+```
+
+The most common positions are full-stack, back-end, and front-end developers. Before the developer type attribute was unnested, these three positions were commonly reported alongside a number of other positions. Across most job types, men’s salaries are higher compared to women and non-binary individuals, however there are a few exceptions. Interestingly, non-binary individuals report higher median salaries for men for a few positions including game or graphics developers, mobile developers, and devOps specialists. However, since individuals who are non-binary take up a very small portion of these positions, it is possible that the few individuals who reported holding these positions (which may very well be the same individuals holding multiple positions) just happen to have particularly high salaries in the sample. Of the more common developer roles listed here, women appear to be underrepresented in DevOps positions, which is the developer type with the third highest average salary as reported in the official 2020 survey report [@stack2020]. 
 
 # Model
 
 ## Propensity Score Matching
 
+Before using multiple linear regression to model the effects of gender on salary, a propensity score matching technique (PSM) was applied to the dataset to reduce the effects of confounding covariates on the main treatment variable, gender. This study uses a quasi-experimental design with observational data in which the selection of a treatment variable and subsequent allocation of respondents to treatment and control groups is a non-random process, and is instead based on subject characteristics [@austin2011introduction]. Unlike randomized control trials where causality can be inferred after proper steps have been taken to ensure treatment and control groups share the same characteristics before being randomized to a particular intervention [@gertler2016impact], it is more difficult to establish causality when using observational data where baseline characteristics may systematically differ between treatment and control groups which may confound the results [@austin2011introduction]. PSM is a technique used to reduce the confounding effects of these baseline characteristics between groups when using observational or nonrandom data. To do this, we can compute and assign propensity scores to each respondent, which is the probability that each observation has of being in the treatment group based on the observed baseline characteristics we have [@gertler2016impact]. Matches are then created based on these scores to ensure that aside from the treatment variable, each observation in the treated group is as similar as possible to another observation in the control group based on the selected matching characteristics. 
+
+Since I am interested in the differential effects of gender on salary, particularly if identifying as a woman has a negative effect on salary, PSM was used to match individuals who identify as men with individuals who identify as women on a number of baseline characteristics I selected from the dataset. While the experiences of non-binary, genderqueer, and gender non-conforming individuals in tech is an important area to research, from this point on my analysis of gender effects on salary will focus specifically on differences between men and women, as the prior research done to guide this study have mostly focused on representation and wage gaps for women. Since the PSM methodology used here relies on a logistic regression model to estimate propensity scores and thus requires a binary treatment variable, I made the decision to examine women as the primary treatment group compared to men, since they were the largest gender group after men and the overall sample size would be reduced based on the number of responses in the treatment group. PSM also requires a relatively large sample size, and only 2% of respondents were non-binary, which would have made it more difficult to match and fit the model and find reliable results. A logistic regression model was built to “predict” the likelihood of reporting to be a man or a woman and conduct matching based on the selected characteristics. Respondents were then matched in R [@citeR] using the `arm` package [@arm]. 
+
+The matching characteristics I selected were: ethnicity, education level, undergraduate major, developer type, age, age which the respondent first coded, the number of years the respondent has been coding, and the number of years the respondent has been coding professionally. These characteristics are all general demographic based attributes which were available in the dataset that I believe were relevant to match men and women on. However, one major limitation of PSM is that the matching is limited to the observed characteristics put into the model, and respondents cannot be matched on unobserved characteristics [@gertler2016impact]. Given the complexities of gender, it is unlikely that the characteristics measured in this survey and used to perform matching sufficiently explain or cover all the underlying differences between genders. Even among the attributes measured in the survey, there may be characteristics that participants were not  matched on in which gender differences may exist and therefore bias the comparisons between the two groups. Therefore, while PSM was performed to help make causal inferences about the effects of gender on salary by attempting to approximate a valid comparison group with observational data, the modeling results may still be biased as the matching of male and female observations was limited to a small selection of observable characteristics from the dataset. The final matched dataset consisted of 1804 observations, with 902 male responses and 902 female responses. 
+
+
 ## Multiple Linear Regression Model
+
+A multiple linear regression model was employed to test the effects of gender on salary using the propensity score matched dataset. Multiple linear regression is a statistical modeling technique which aims to predict a continuous response variable based on a number of predictor variables [@olive2017multiple]. Compared to simple linear regression which focuses on the effects of one explanatory variable on the response variable, multiple linear regression allows us to account for a number of different factors, both qualitative and quantitative, which may contribute to the response variable. This allows us to examine both the ways in which these factors individually contribute to the outcome, along with how they work together overall to explain the response variable [@marill2004advanced]. Including multiple predictor variables in the model not only allows us to statistically control for variables whose effects may underlie the response variable, but also gives us the opportunity to examine interaction effects of variables we think may be related along with the main effects of the predictor variables. For these reasons, multiple linear regression is often used to estimate treatment effects by regressing the outcome variable on a predictor variable indicating treatment status, while accounting for the effects of covariates in the model. If a statistically significant coefficient of the treatment variable is found in the model results, we might be able to infer the existence of a treatment effect in the data [@zanutto2006comparison]. Of course, making such an inference also depends on steps taken in the experimental design process to ensure valid comparison groups as well as the validity of the statistical model itself. 
+
+Multiple linear regression was selected for this study in particular as I am interested in modeling the effects of various predictor variables and their interactions on salary, which is a continuous variable. While I am primarily interested in the effects of gender as a treatment variable, there are several other predictors and interactions such as ethnicity and experience that I want to explore, along with the inclusion of various demographic covariates that I would like to control for in the model. Another reason why I chose this particular method is that multiple linear regression has commonly been used to model salary in previous studies which have examined gender differences in wages and salaries [@zanutto2006comparison; @jena2016sex; @jagsi2013gender; @alkadry2006unequal; @rubinfeld2000reference]. 
+
+The following equation depicts the regression model used to predict salary.
 
 
 $$
@@ -240,20 +286,30 @@ $$
     \beta_{6}edlevel_{i} + 
     \beta_{7}devtype_{i} + \\
     \beta_{8}age_{i} +
-    \epsilon_{ij}
+    \epsilon_{i}
 \end{aligned}
 $$
 
-The output term on the left-hand of the equation represents the response variable, salary. As the salary distribution in the dataset follows a log-normal distribution, a log transformation was applied to the salary variable to normalize the data. $\beta_{0}$ is the model’s intercept, which represents the mean salary when all predictor values are equal to 0, or categorical variables are at their reference levels. The other $\beta$ terms in the equation represent coefficients the model will compute for each corresponding predictor variable, which are the partial slopes of each predictor variable, and the response variable, salary. Finally, $\epsilon_{i}$ represents the model’s residual errors.
+The output term on the left-hand of the equation represents the response variable, salary. As the salary distribution in the dataset follows a log-normal distribution, a log transformation was applied to the salary variable to normalize the data. $\beta_{0}$ is the model’s intercept, which represents the mean salary when all predictor values are equal to 0, or categorical variables are at their reference levels. The other $\beta$ terms in the equation represent coefficients the model will compute for each corresponding predictor variable (i.e. gender, ethnicity, etc.), which are the partial slopes of each predictor variable and the response variable, salary. That is, how much log(Salary) will change with each one unit increase of the predictor variable or, how much log(Salary) changes compared to the categorical variable's reference category, with all other variables held constant. Finally, $\epsilon_{i}$ represents the model’s residual errors.
 
-* _Gender_
-* _Ethnicity_
-* _Gender\*Ethnicity_
-* _YearsCodePro_
-* _Gender\*YearsCodePro_
-* _EdLevel_
-* _DevType_
+The section below discusses each predictor variable which was added into the model in more detail. The bolded variables are the main predictors I am interested in, while the rest are features that were added to the model as control variables. For categorical variables, the category with the most respondents was selected to be the reference group. 
 
+* **_Gender_** is the main treatment variable I am examining, and is included as a binary variable. While it was originally classified as a categorical variable with three different levels (man, woman, and non-binary), the non-binary category was removed to facilitate propensity score matching as discussed previously. Although gender is better understood as a spectrum rather than a binary construct, it was measured categorically in this survey, and will be treated in a binary manner for this analysis. The reference category is “male”. 
+* _Ethnicity_ is a categorical variable containing 7 different categories. The reference category is “White or of European descent”. 
+* **_Gender\*Ethnicity_** is the interaction term for the gender and ethnicity variables. This was included in the model as research on wage inequalities suggest gender and race and ethnicity often interact to affect salary [@fisher2015]. 
+* _YearsCodePro_ is the number of years the respondent has been coding professionally. Although this was originally a continuous variable (aside from endpoints “less than 0” and “greater than 50”), I grouped the years into categories of five years each for this analysis. The relationship between years coding professionally and salary is not a straight linear one, and might be understood better in groups. For example, while earlier descriptive graphs showed a linear relationship between experience and salary for respondents with less experience, this trend diverges for respondents with greater years of experience. More importantly however, categorizing years of experience in this manner allows us to take a closer look at gender differences in salary at various levels of experience, since they follow different trends. The reference group for this category is “Less than 5 years”. 
+* **_Gender\*YearsCodePro_** Gender*YearsCodePro is the interaction term for gender and years of professional coding experience. As women often have less professional experience in the tech industry and take up a higher portion of entry level positions, there may be significant differences in the gender wage gap between men and women depending on the level of experience they have. For instance, \@ref(fig:salexp) showed similar trends for women and men’s salaries at less than 10 years of experience, but notable differences between genders at 10 to 30 years of experience. 
+* _EdLevel_ is a categorical factor describing the respondents’ highest level of education. There are four levels: less than Bachelor's Degree, Associate’s degree, Bachelor's degree, and Graduate degree.^[‘Less than Bachelor’s Degree’ was formed to include responses from individuals who reported no formal education, high-school education, some college/university education without a degree and so forth. ‘Graduate degree’ includes master’s degrees, professional degrees, and other doctoral degrees.] 
+* _DevType_ was added to the model as a control variable. As discussed in the data section, this variable is a factor with 16 levels containing information about the respondents’ developer role. The reference category for this variable is "Full-Stack Developer". 
+* _Age_ was added to the model as a control variable. As I was not looking into the effects of any particular age group on salary, this variable was kept in its original form as a continuous numeric variable to simplify the model. 
+
+## Assumptions and Model Checking
+
+The multiple linear regression model was run in R [@citeR] using the `lm` function. There are several key assumptions associated with multiple linear regression analysis which need to be checked. Figure \@ref(fig:performance) is a visual check of the model’s assumptions created with the `performance` package [@performance], which contains plots checking multicollinearity, normality of residuals, homoscedasticity, and cook’s distance for influential points. 
+
+The first plot visualizes multicollinearity, which exists when predictor variables are highly correlated to each other. The only variables we see high multicollinearity for are the interaction terms (i.e. ethnicity and gender*ethnicity), which makes sense since these terms include the main effects. The distribution of residuals appears relatively normal^[While the model was originally run with salaries between \$10,000 and \$400,000, after an initial performance check which showed significant skew on the left tail, the lower threshold was changed to \$30,000. The performance figure shown here and resulting model reflect this change.], although there is slight curvature on the tail ends of the Q-Q plot, the overall linear trend follows the line. Plots of the fitted values versus residuals show no discernible patterns and are equally spread around horizontal lines, suggesting assumptions of equal variance have been met. Finally, there are no notable influential observations which affect the model. 
+
+To check the model’s performance as a predictor of salary, the propensity score matched dataset was split into a training and testing set using a 70:30 split ratio. After the model was trained on the testing set, it was applied to the testing portion of the data using the `predict` function. Root mean squared percentage error and median absolute percentage error were calculated by comparing the predicted values with the actual salary values of the test data, using the functions `RMSPE` and `MedianAPE` from the `MLmetrics` package [@MLmetrics]. Both error percentages were very small (RMSPE = 3.1% and Median APE = 1.9%), which suggests the model accurately predicted salaries within this subset of the data with minimal error. However, while these measures support the model’s accuracy in this particular context, it does not necessarily mean it is generalizable to other data or effective as a “real-world” predictor of salary when taken out of the very limited constraints it was built around. 
 
 ```{r include = F}
 #removing salaries under 30000 after initial model performance check
@@ -272,55 +328,54 @@ survey_matched$DevType <- relevel(survey_matched$DevType, ref = "Full-Stack Deve
 survey_matched$YearsCodeProCat <- as.factor(survey_matched$YearsCodeProCat)
 survey_matched$YearsCodeProCat <- relevel(survey_matched$YearsCodeProCat, ref = "Less than 5 years")
 
+#creating salary model
 salary_model <- 
   lm(log(Salary) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
      data = survey_matched)
 
 summary(salary_model)
-
+#rmspe for fitted values vs. log (Salary) -> 3%
 RMSPE(salary_model$fitted.values, log(survey_matched$Salary))
-
-100 * (exp(0.6945963)-1)
 ```
 
 ```{r performance, fig.width = 10, fig.height = 10, fig.cap="Visual Check of Multiple Linear Regression Assumptions", echo=F}
+#checking assumptions with performance package
 check_model(salary_model)
 ```
+
 ```{r, include = F}
 #RMSE model validation with train and testing data
 survey_matched2 <- survey_matched
 survey_matched2$Salary <- log(survey_matched2$Salary)
 
+#random 70/30 split of matched dataset
 set.seed(888) 
 training <- sample(nrow(survey_matched2), floor(nrow(survey_matched2)*0.7)) 
 train <- survey_matched2[training,]
 test <- survey_matched2[-training,]
 
+#running model with 70% training data
 salary_model_train <- 
   lm(Salary ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
      data = train) 
-
+#using model to predict salary for test values
 prediction <- predict(salary_model, test)
 
-rmse(test$Salary, prediction)
-RMSPE(prediction, test$Salary)
-MedianAPE(prediction, test$Salary)
+#rmse, rmspe, and medianAPE performance checks comparing predicted training values vs. actual log(salary)
+RMSPE(prediction, test$Salary) #3%
+MedianAPE(prediction, test$Salary) #1.9%
 ```
 
 # Results
 
-$$
-\begin{aligned}
-  100 * (e^{\beta_{j}} - 1) 
-\end{aligned}
-$$
-i think j is the # of attributes (columns) and i is the number of observations (rows)
+The multiple linear regression model was applied to the propensity matched dataset to predict salary. Figure \@ref(fig:coeff) displays the model coefficients and their error bars indicating upper and lower estimates with a 95% confidence interval. A full numeric breakdown of the model results including p-values to indicate statistical significance is shown in Table \@ref(tab:regmodel).^[Table created with `gtsummary` [@gtsummary] and `flextools` [@flextable] packages.]
+
 
 ```{r coeff, fig.width=10, fig.height = 10, echo = F, fig.cap="Coefficients for Multiple Linear Regression Model"}
 #figure of coefficients with error bars present (95% CI)
-coefest <- broom::tidy(salary_model, conf.int = T) 
+coefest <- broom::tidy(salary_model, conf.int = T) #grabbing coefficients and confidence intervals from model results
 coefest <- coefest[-1,] #removing intercept for plotting
-#maybe find a way to bold the significant terms
+
 coefest %>% ggplot(aes(estimate, term)) +
   geom_point() +
   geom_errorbar(aes(xmin = conf.low, xmax = conf.high)) +
@@ -331,6 +386,7 @@ coefest %>% ggplot(aes(estimate, term)) +
 
 
 ```{r regmodel, echo = F}
+#formatting table of regression output
 salary_model %>%
   tbl_regression(pvalue_fun = ~style_pvalue(.x, digits = 2), 
                  estimate_fun = ~style_number(.x, digits = 3),
@@ -345,11 +401,33 @@ salary_model %>%
   as_flex_table() %>%
   font(fontname = 'Times', part = "all") %>%
   fontsize(size = 10.5, part = "body") %>%
-  fontsize(size = 7, part = "footer") 
+  fontsize(size = 7, part = "footer") %>%
+  set_caption("Multiple Linear Regression Ouput Testing the Effects of Gender on Salary")
 ```
 
+Figure \@ref(fig:coeff) shows noticeably large error bars for the Middle Eastern ethnicity category and its interactions, as well as the years of experience categories for 30-34 years, 35-39 years, and 40-44 years. It should be noted that these groups also contain the smallest sample sizes in their respective categories and in this subsection of the dataset. In Table \@ref(tab:regmodel), bolded figures represent attributes in the model which were statistically significant at p < 0.01. One thing to remember when reading the model results is that a log-normal transformation was applied to the dependent variable, salary, which means the model coefficients in the output do not directly reflect dollar changes in salary associated with each variable. To interpret the coefficients in terms of percentage changes in salary, we can input the coefficients into the following equation.
 
-```{r, fig.cap = "Intearction Plot for Gender and Experience", fig.width=10, fig.height=7, echo = FALSE}
+$$
+\begin{aligned}
+  100 * (e^{\beta_{j}} - 1) 
+\end{aligned}
+$$
+
+Here, $e$ is the exponential function and $\beta$ is the estimated coefficient. The resulting number represents the percentage increase in salary associated with a 1 unit increase in the predictor variable with all other variables held constant or at reference level, or the percentage increase associated with a certain level in a categorical variable compared to the reference group with all other variables held constant [@cornell2020]. The reference groups for this model were: male, White or of European descent, Bachelor’s education, full-stack developer position, and less than 5 years of professional coding experience, meaning coefficients will be interpreted with these levels held constant. 
+
+## Main Effects
+
+First, the model showed no significant main effect for gender. This indicates that while holding all other predictors constant and at their reference categories, women do not earn significantly higher or lower salaries than men. Regarding ethnicity, there was a significant main effect for individuals reporting to be East Asian, who on average, earned around 14% more salary than White respondents with all other categories held at reference level. No other groups in the ethnicity category had significantly different salaries compared to White respondents. When we examine the main effect of years of professional coding experience, we see that compared to respondents at reference level with less than 5 years of experience, each category with an additional 5 years of experience is associated with significant subsequent increases in salary up (i.e. compared to those with less than 5 years of experience, respondents with 5-9 years of experience is associated with a 20% increase with salary, 20-24 years is associated with a 32% increase and so forth). This salary growth continues to increase until its peak at 30-34 years of experience, which shows a 100% salary increase compared to less than 5 years of experience. At 35-39 years of experience, we see less of an increase in salary, with the percentage growth compared to those with less than 5 years of experience being similar to that of respondents with 15-19 years of experience.
+
+In terms of control variables, age did not appear to be a significant predictor of salary, however the respondent’s highest level of completed education was significantly associated with salary. Compared to a bachelor’s degree, completion of a graduate degree was associated with a 11.6% increase in salary, while completion of an associate’s degree or less than a bachelor’s degree were associated with significant decreases in salary. Finally, there was some variation in the impact of developer type on salary, data engineers being associated with significantly higher salaries than full-stack developers, and positions such as designers and database administrators being associated with lower salaries. Most developer types however, were not significantly associated with changes in salary compared to full-stack developers with other variables held at their reference categories. 
+
+## Interaction Effects
+
+Aside from the main effect of gender, interpretations of the coefficients discussed for the other attributes in the model have been in reference to male respondents, as they were the reference category for gender. The model also included interaction terms to examine how gender may interact with ethnicity and experience to affect salary. None of the interactions between ethnicity and gender were statistically significant at p < 0.01. Interestingly, while there was no main effect of gender on salary, the interaction between gender and years of professional coding experience was significant for women with 20-24 years of experience and women with 25-29 years of experience, in which being a woman was associated with less salary compared to men with similar years of experience at these levels. This is best illustrated in Figure \@ref(fig:interact), which plots the fitted model’s interaction effects for gender and years of professional coding experience using the `interactions` package [@interactions]. 
+
+
+```{r interact, fig.cap = "Intearction Plot for Gender and Experience", fig.width=10, fig.height=6, echo = FALSE}
+#using model results to plot interaction results for gender and experience
 cat_plot(salary_model, YearsCodeProCat, Gender, 
          geom = "line", 
          colors = c("#FC8D62", "#8DA0CB"),
@@ -357,9 +435,37 @@ cat_plot(salary_model, YearsCodeProCat, Gender,
          main.title = "Model Interaction Effects for Gender and Years of Professional Coding Experience")
 ```
 
+As discussed previously, there appears to be a main effect of experience for men where each group with an additional 5 years of experience is associated with relatively steady increases in salary until peaking at around 30-34 years of experience. Women with under 15 years of professional coding experience appear to follow this trend, as their salaries are approximately equal to men’s salaries in the first three groups (less than 5 years of experience, 5-9 years of experience, and 10-14 years of experience). However, we start to see some departures from this pattern at 15-19 years of experience where women start making slightly less than men, before seeing significant differences at the 20-24 year and 25-29 year mark. While men continue to experience increases in salary, we observe noticeable drops for women who now make significantly less than men at these points, which is consistent with the significance indicators for these levels of the interaction on the model’s output. Salaries appear to increase again for women with 30-34 years of experience and then converge with men’s salaries onward, however these levels were not statistically significant and show very large error bars. This is likely due to the fact that the sample sizes for respondents in groups representing higher levels of professional coding experience were extremely small compared to those with less experience. While respondents with 45-49 years and 50+ years of experience existed in the original dataset, there were no women in these groups, meaning the interaction between gender and years of professional coding experience could not be modeled at these levels.
+
+# Discussion 
+
 ## Overview of Findings
 
+In light of growing calls for diversity in the tech industry and concerns about wage inequalities based on gender and race, this paper used data from the Stack Overflow Developer Survey to examine the relationship between gender and salary for tech workers in the United States. In addition to testing for main causal effects of gender on salary, the effects of interactions between gender and ethnicity, and gender and experience were also explored. A descriptive overview of the survey results found the vast majority of respondents were men, and most respondents were of White or European descent. After removing extremely high and low salaries, on average, men reported higher salaries than female and non-binary respondents. To test if these gender differences had a meaningful causal impact on salary, propensity score matching was used to form matching sets of male and female respondents based on several other characteristics from the dataset. A multiple linear regression model was then applied to the matched data to model salary and estimate the effects of gender, gender and ethnicity, and gender and experience. No statistically significant effects were found gender as a main treatment variable, which indicates that in general, being a woman was not associated with having a lower salary compared to men. Additionally, while ethnicity and gender did not interact to affect salary, there was a significant interaction between gender and years of professional coding experience in which women with 20-24 years of professional coding experience and women with 25-29 years reported lower salaries than men. 
+
+Although this study found no evidence for a main effect of gender on salary, this does not necessarily mean wage inequalities between men and women don’t exist in the United States tech industry. However, the relationship between gender and salary is complex, and it is unlikely that the wage differences we often observe between men and women can simply be explained by the idea that women earn less solely because of their gender. Numerous other factors, including those measured in the survey and included in the model, as well as other unobserved characteristics, interact with gender in complex ways to affect salary. One of these factors is experience, as we see a large number of women with less than 5 years of experience, while individuals with more years of professional coding experience (around 20+ years) are usually men. A possible explanation for the overall wage differences between men and women can be attributed to the fact that more women in the industry are less experienced and therefore have lower salaries on average, however this places more importance on the role of experience as a predictor of salary rather than gender differences. A closer look at how gender and experience interact in both the data and modeling results revealed that men and women with equal years of professional coding experience reported similar salaries when they had under 20 years of experience, however for respondents with 20-30 years of experience, men made significantly more than women. So while men and women may start off in the industry with similar salaries and experience similar growth trajectories as they gain more experience, at 20-30 years women suddenly start reporting lower salaries while men’s salaries stay roughly the same.
+
+Given these results, what might explain the salary differences between men and women who have more years of professional coding experience? Research exploring retention problems for women in the tech industry has shown women are passed over for promotions more often than men, with more experienced women reporting they often feel “stuck” in their position and have difficulties advancing past certain stages in their careers compared to their male peers with similar levels of experience [@techleave; @hewlett2008athena]. This is commonly referred to as the glass ceiling effect, which represents the societal barriers women face in the workplace in which they often reach a point in the corporate hierarchy they are unable to advance past [@cotter2001glass]. Although this study focused on salary differences for individual-level contributors and upper management and executive positions were removed prior to the analysis, the vast majority of individuals holding these upper level positions were still men. Therefore it is unlikely that these results can solely be explained by the fact that high ranking women with management positions and higher salaries were excluded from this analysis. 
+
+Gender-based discrimination involving key promotions or important salary negotiations may be driving the inequalities observed for respondents with more years of experience, however this data is missing a potentially critical component of the gender pay gap which has been well established in the literature, which is the effects of having children. In past years, the Stack Overflow Developer Survey asked respondents to report if they have children or other dependents that they care for, however this question was not asked in the 2020 version of the survey. According to results from the 2019 Developer Survey, around 40% of total respondents, and 60% of respondents with 10 or more years of professional coding experience reported having dependents. [@stack2019]. A previous analysis of gender and salary using data from the 2019 Developer Survey found similar interactions between gender and years of experience as this study, as well as significant interactions between gender and dependents [@silge2019]. Notably, while having dependents did not affect salary for men, it was associated with reduced salaries for women. This is consistent with previous research which suggests motherhood is a significant contributor the gender wage gap, as the difference between men and women’s earnings begins to widen after the arrival of children, with college-educated women in high-earning occupations in particular being the most affected by this [@miller2018children; @clawson2014unequal]. Unequal household division of labour might result in women spending more time on family obligations and less on long working hours which may be necessary to receive a promotion, or less time invested in networking and facilitating job search activities which could lead to financially advantageous job changes [@barth2021dynamics]. At later stages in their careers, women might also be less likely to receive promotions or even seek out promotions both within and across companies due to increased need for flexibility and time for family obligations. This might explain some of the gender differences in salary observed for respondents with more years of experience. However, in the analysis of the 2019 survey data which included information about dependents, the interaction between gender and experience was still significant even after accounting for wage inequalities based on dependents, suggesting disparities still exist even for women without children. 
+
+This report also took an intersectional approach to examining gender-based wage inequalities by examining how women in underrepresented racial or ethnic groups may be disproportionately affected by the wage gap. The model results showed no significant interaction between gender and ethnicity, and most categories for ethnicity as a main effect were also insignificant compared to the salaries of White respondents. As mentioned previously, around 80% of the respondents were White, therefore the sample sizes for other non-White groups in this dataset were extremely small, and were reduced even further when the model was run after being propensity score matched. The small sample sizes for these groups may be part of the reason no significant effects or interaction effects were found in regards to ethnicity despite past literature indicating the existence of a race-gender wage gap [@hired; @fisher2015; @pewrace]. 
+
+Despite the fact that main causal effects were not found for gender or the interaction between gender and ethnicity, underrepresentation and the lived experiences of gender and race based discrimination in the United States tech industry are still serious problems. The 2020 Developer survey results indicate that women, non-binary, genderqueer, or gender non-conforming respondents, as well as non-white respondents are still vastly underrepresented in tech communities. Although it is encouraging to see a great number of women entering the industry and receiving equal compensation as men in earlier years, the fact that that there are so few women with greater years of professional coding experience, and that the women in the industry who have more experience are paid significantly less than their male peers highlights the retention problem in the industry. To ensure the women who responded to this survey with less years of professional coding experience continue to grow and advance successfully in the industry over the next 10 years, companies need to directly address the reasons which are causing women to leave the industry, which includes giving women the same opportunities to advance as men and providing fair compensation. Unfortunately, many issues underlying unfair workplace practices can be linked to structural sexism and racism, and long held ideas that tech is a “boys club” [@acker2006inequality; @hewlett2008athena]. Companies need to implement more genuine and comprehensive strategies to promote inclusivity, such as auditing compensation and performance management practices at all levels of the employment cycle to mitigate bias. This also includes addressing toxic and discriminatory workplace cultures and environments which often cause women to leave their positions. Finally, regardless of this study’s findings that ethnicity and gender did not interact to affect salary, it is still important for companies to take an intersectional approach when developing and implementing these strategies to provide better support and understanding of the experiences of racialized women and non-binary tech workers. 
+
 ## Limitations and Future Directions
+
+There are several weaknesses and limitations with this study to address. First, as discussed in the data section, this analysis relies on self-report survey data, therefore common concerns associated with using survey data such as validity issues and response bias must be considered when interpreting the results. Non-responses for the attributes which were examined in this report were primarily removed, however there may be differences in various characteristics between those who reported certain questions and those who did not. There is also no guarantee that all responses were truthful or that all questions were interpreted in the same way. For example, an attribute such as salary could have easily been over or under reported in many cases, which could have impacted the model results. In the survey, respondents were able to select multiple responses for questions regarding ethnicity and developer type, each which were dealt with differently in the analysis. For ethnicity, respondents who selected more than one response were filtered out to simplify the analysis. Although this was not a significant amount of respondents, it still resulted in potentially important data being lost from the analysis, especially since sample sizes for groups who were non-White were already small to begin with. Unlike ethnicity, a significant portion of respondents selected multiple responses to describe the type of developer position they have in the workplace, which makes sense given the overlap for many of these positions. To facilitate the analysis of this variable in the model, the developer types were split and unnested, resulting in a longer dataset where the same respondent appears multiple times. Of course, this has implications for both the propensity score matching and subsequent model if the same respondent (with the same salary and demographic characteristics) is being counted multiple times in the dataset as separate responses, especially for respondents with salaries which might be particularly high or low, or for respondents belong to racial or ethnic groups which were the most underrepresented in the data. 
+
+Propensity score matching was used to reduce the effects of confounding covariates which are associated with gender, and match male and female respondents based on similar characteristics. However, the PSM technique has several weaknesses which should be noted. As previously discussed, the data were only matched based on a limited number of observed characteristics, however there are a number of other confounding factors related to gender which either weren’t assessed in the dataset, or were not included in the matching formula. These “hidden” differences which were unaccounted for in the matching process may have affected the modeling results in unknown ways. Another weakness of propensity score matching is that a considerable number of responses are lost when matching to a treatment group with a small sample size [@streiner2012pros]. While the initial dataset was quite large, since women only made up around 10% of respondents, the final matched dataset was significantly reduced to match the male responses to the female ones, meaning a lot of data was lost for the model. This was particularly noticeable when examining the effects of ethnicity, where some categories had extremely small sample sizes after the matching process. Finally, along with concerns about the process of matching in general, there have been criticisms of the PSM technique in particular which have argued that PSM often increases imbalance for covariates rather than reducing it, and increases model dependence which can generate bias [@king2019propensity].
+
+Limitations to the model itself largely involve the number of features which were not included in the model. Besides gender, ethnicity, and years of professional coding experience, the effects of several other variables such as age, education, and developer type were controlled for in the model. Given something as complex as salary, it is very unlikely that this model contains all the features which contribute to salary. Other attributes which were measured in the survey such as the size of the company the respondent works for, working hours, or the number of programming platforms and languages the respondent has worked with may also contribute to salary. There may also have been other attributes which interact with gender which were not included in the model, and may have provided more information on the overall relationship between gender and salary. For example, developer type was controlled for in this model, but there could also be a relationship between gender and developer type which could be differentially affecting salary for men and women. 
+
+Another main limitation of the model is our ability to generalize its results to the broader population, in this case the entire United States tech industry. First, the model findings are somewhat limited to the data used to build the model. The Stack Overflow Developer Survey, which is a non-random sample representing a subset of the tech industry at one point in time, is not necessarily representative of the tech industry as a whole. Second, the generalizability of the results is constrained to the attributes which were added into the model, how they were phrased and measured in the survey, and how and when respondents chose to respond to these questions. Applying this model and its results to reality is far more complex, as there are events and complex interactions in the “large world” which we could not anticipate or did not account for in the modeling process, which hinders our ability to draw meaningful conclusions about the real world based on the results found in this study [@mcelreath2020statistical]. That is not to say there is no truth to these findings, however the results should be understood in the context of the data and modeling decisions made in this study, and we should be mindful of the extent to which they fit into the real world and our existing knowledge and research on this topic.
+
+Overall, since the questions asked in the Stack Overflow Developer Survey often differ on a year to year basis, comparisons and subsequent analyses of future and past iterations of the Developer Survey can provide new insights into how gender may interact with different variables to affect salary. Since this analysis took a very simplified approach to modeling salary and only used a limited number of hand-picked variables in the model, future work would benefit from taking a more comprehensive and systematic approach to feature selection starting from all available variables in the dataset, while also considering new interactions between gender and other variables. This paper focused on the effects of gender and salary for men and women only. Unfortunately, due to the small sample size for this group, as well as binary requirements for the PSM technique that was used, respondents who identified as non-binary, genderqueer, or gender non-conforming were not included in this analysis. Since the majority of the research on gender inequalities in the tech industry has primarily focused on women, an important area of future research would be to examine the experiences and salary implications of individuals with other gender identities who are both underrepresented and understudied in the tech industry.  
+
+Due to the weaknesses associated with propensity score matching, future work examining causal effects of gender can utilize other matching methods which may be more robust and effective at reducing imbalance and model dependence. This study also explored salary through a single model, multiple linear regression, which was chosen for its simplicity and past usage in salary modeling, however a comparison of other types of models which may also be suited to this data would also be valuable. For instance, bayesian modeling or mixed-effects models could also be applied to this data, and the results could be compared across models to gain a better understanding of how gender interacts with other variables to affect salary. 
 
 \newpage
 
@@ -381,6 +487,7 @@ This subsection lists the R packages used in the making of this report.
 * `scales` [@scales]
 * `plyr` [@plyr]
 * `forcats` [@forcats]
+* `broom` [@broom]
 * `visdat` [@visdat]
 
 ### Figures {-}

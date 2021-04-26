@@ -8,7 +8,7 @@ output: html_notebook
 # Contact: morgaine.westin@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: 
-# - Need to have downloaded the ACS data and saved it to inputs/data
+# - Downloaded stack overflow 2020 survey results and schema csvs must be in inputs/data
 
 ---
 

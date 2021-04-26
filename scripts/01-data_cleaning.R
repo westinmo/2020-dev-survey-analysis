@@ -1,20 +1,21 @@
 #### Preamble ####
-# Purpose: 
+# Purpose: Initial Data Cleaning of 2020 Stack Overflow Developer Survey in preparation for analysis. Survey Csv and schema downloaded from: 
+#https://insights.stackoverflow.com/survey/?_ga=2.264336585.777067861.1615819488-1997135835.1608088113. 
 # Author: Morgaine Westin
-# Date: 6 April 2021
+# Date: 25 April 2021
 # Contact: morgaine.westin@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: 
-# - Need to have downloaded the ACS data and saved it to inputs/data
+# - Must have 2020 SO Dev Survey data downloaded and saved in /inputs/data/ 
 
 library(tidyverse)
 library(here)
 library(readr)
 library(visdat)
 library(janitor)
-library(questionr)
 library(plyr)
 library(broom)
+table(survey_raw$EdLevel)
 #Reading in Data
 survey_raw <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
 #survey schema outlining which questions correspond to each column name
@@ -27,7 +28,7 @@ survey_clean <- survey_raw %>%
          ConvertedComp < 400000,
          ConvertedComp >= 10000
   ) %>%
-  mutate(YearsCodeProNew = parse_number(YearsCodePro),) %>%
+  mutate(YearsCodeProNew = parse_number(YearsCodePro),) %>% #parsing to remove endpoints 'less than 0' and 'greater than 50' for analysis in num form
   mutate(Age1stCode = parse_number(Age1stCode),) %>%
   mutate(YearsCode = parse_number(YearsCode),)
 
@@ -81,7 +82,7 @@ survey_clean$EdLevel <- fct_collapse(survey_clean$EdLevel,
                                       
                                      
 #Mainly interested in industry working tech professionals who are individual contributors
-#Removing researchers, educators, and scientists, managers, students, senior execs
+#Removing researchers, educators, and scientists, managers, students, senior execs -> referenced from: https://juliasilge.com/blog/salary-gender/
 remove <- survey_clean %>%
   filter(str_detect(DevType, 
                     "Academic researcher|Scientist|Educator|Student|Other|Marketing or sales professional|Product manager|Senior Executive (C-Suite, VP, etc.)|Senior executive/VP|Engineering manager"))
@@ -89,13 +90,16 @@ remove <- survey_clean %>%
 survey_clean <- survey_clean %>%
   anti_join(remove)
 
+
+table(remove$Gender)
+
 #Splitting DevType
 survey_unnest <- survey_clean %>% 
-  mutate(DevType = str_split(DevType, pattern = ";")) %>%
+  mutate(DevType = str_split(DevType, pattern = ";")) %>% #referenced from: https://juliasilge.com/blog/salary-gender/
   unnest(DevType) #
 survey_unnest$DevType <- as.factor(survey_unnest$DevType)
 survey_unnest$DevType <-
-  fct_recode(survey_unnest$DevType, 
+  fct_recode(survey_unnest$DevType, #renaming for graph clarity
              "Back-End Developer" = "Developer, back-end",
              "Embedded Applications or Devices Developer" = "Developer, embedded applications or devices",
              "Full-Stack Developer" = "Developer, full-stack",
@@ -117,4 +121,3 @@ survey_unnest <- survey_unnest[!is.na(survey_unnest$DevType), ]
 write_csv(survey_clean, here::here("inputs/data/survey_clean.csv"))
 write_csv(survey_unnest, here::here("inputs/data/survey_unnest.csv"))
 
-table(survey_clean$DevType)

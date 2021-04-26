@@ -1,23 +1,24 @@
 #### Preamble ####
-# Purpose: 
+# Purpose: This script creates a propensity score matched dataset using previously cleaned data and prepares it for regression analysis.
 # Author: Morgaine Westin
-# Date: 6 April 2021
+# Date: 25 April 2021
 # Contact: morgaine.westin@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: 
+# - Must have run 01-data_cleaning.R script before running this script
 
 
-library(arm)
+library(arm) #used for matching
+
 #copying data for propensity score matching
+survey_unnest <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
 survey_test <- survey_unnest
-
 
 #Factorizing 
 survey_test$UndergradMajor <- as.factor(survey_test$UndergradMajor)
 survey_test$Gender <- as.factor(survey_test$Gender)
 survey_test$Ethnicity <- as.factor(survey_test$Ethnicity)
 survey_test$DevType <- as.factor(survey_test$DevType)
-
 
 
 #Replacing NAs for matching variables or removing NAs 
@@ -31,7 +32,7 @@ survey_test$YearsCodeProNew[is.na(survey_test$YearsCodeProNew)] = mean(survey_te
 survey_test$Age1stCode[is.na(survey_test$Age1stCode)] = mean(survey_test$Age1stCode, na.rm = TRUE) #replace 24 NAS
 survey_test$YearsCode[is.na(survey_test$YearsCode)] = mean(survey_test$YearsCode, na.rm = TRUE) #replace 36 NAs
 
-#Transforming yearscodepro into a categorical variable
+#Transforming yearscodepro into a categorical variable for analysis (intervals of 5 years)
 survey_test$YearsCodeProCat <- cut(survey_test$YearsCodeProNew, 
                                    breaks = unique(c(0,4,9,14,19,24,29,34,39,44,49,50,
                                               max(survey_test$YearsCodeProNew))),
@@ -45,35 +46,27 @@ survey_test$YearsCodeProCat <- cut(survey_test$YearsCodeProNew,
 propensity_score <- glm(Gender ~ Ethnicity + EdLevel + DevType + Age + Age1stCode + YearsCode + YearsCodeProNew
                         + UndergradMajor,
                         family = binomial,
-                        data = survey_test)
+                        data = survey_test) #creation of lm model to "predict" gender and match based on selected characteristics
 
 survey_test <- 
   augment(propensity_score, 
           data = survey_test,
           type.predict = "response") %>% 
-  dplyr::select(-.resid, -.std.resid, -.hat, -.sigma, -.cooksd) 
-
-survey_test <- 
-  survey_test %>% 
+  dplyr::select(-.resid, -.std.resid, -.hat, -.sigma, -.cooksd) %>%
   arrange(.fitted, Gender)
-
-survey_test$Gender2 <- revalue(survey_test$Gender, c("Man"=0, "Woman"=1, "Non-binary, genderqueer, or gender non-conforming"=2))
+#nb will be removed from matched set; can only be 0 or 1
+survey_test$Gender2 <- revalue(survey_test$Gender, c("Man"=0, "Woman"=1, "Non-binary, genderqueer, or gender non-conforming"=2)) 
 survey_test$Gender2 <- as.integer(as.character(survey_test$Gender2))
 
-#Matching
+#Creating matched dataset
 matches <- arm::matching(z = survey_test$Gender2, score = survey_test$.fitted, replace = F)
 survey_test <- cbind(survey_test, matches)
-
 survey_matched <- 
   survey_test %>% 
   filter(match.ind != 0) %>% 
   dplyr::select(-match.ind, -pairs, -Gender2)
 
-survey_matched$Ethnicity <- relevel(survey_matched$Ethnicity, ref = "White or of European descent") %>%
-  droplevels()
-survey_matched$EdLevel <- relevel(survey_matched$EdLevel, ref = "Bachelor's")
-survey_matched$DevType <- relevel(survey_matched$DevType, ref = "Full-Stack Developer")
-
+#Save matched dataset for analysis on rmd file
 write_csv(survey_matched, here::here("inputs/data/survey_matched.csv"))
 
 
