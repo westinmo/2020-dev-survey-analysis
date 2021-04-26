@@ -18,13 +18,15 @@ library(here)
 library(readr)
 
 ###Preparing dataset for app
+#survey_app <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
 survey_app <- readr::read_csv("survey_results_public.csv")
+
 survey_app  <- survey_app %>%
     dplyr::filter(Country == "United States", 
            Employment == "Employed full-time",
            MainBranch == "I am a developer by profession" | MainBranch == "I am not primarily a developer, but I write code sometimes as part of my work",
     ) %>% #selecting survey questions to include in the app (mostly ones that don't have too many levels to plot; focus on demographics)
-    select("Age", "Gender", "Ethnicity", "Sexuality", "Trans", "EdLevel", "UndergradMajor", "Age1stCode",
+    dplyr::select("Age", "Gender", "Ethnicity", "Sexuality", "Trans", "EdLevel", "UndergradMajor", "Age1stCode",
            "MainBranch", "DevType", "Hobbyist", "YearsCode", "YearsCodePro", "OrgSize", "JobSat", "NEWOvertime", 
            "SOAccount") %>%
     mutate(YearsCodePro = parse_number(YearsCodePro),) %>%
@@ -66,6 +68,7 @@ survey_app <- plyr::rename(survey_app, c("EdLevel" = "Education", "OrgSize" = "O
                                          "YearsCodePro" = "YearsProfessionalCodingExp", "YearsCode" = "YearsCodingExp"))
 
 #dataset for Salary
+#survey_app2 <- readr::read_csv(here::here("inputs/data/survey_results_public.csv"))
 survey_app2  <- readr::read_csv(here::here("survey_results_public.csv"))
 survey_app2  <- survey_app2 %>% filter(Country == "United States", 
                                       Employment == "Employed full-time",
@@ -101,7 +104,7 @@ ui <- fluidPage(
                           selectInput(inputId = "x", label = "Survey Questions:",
                                       choices = colnames(survey_app),
                                       selected = "DeveloperType")),
-             mainPanel(plotOutput("surveyplot")),
+             mainPanel(plotlyOutput("surveyplot")),
     ),
     tabPanel("Salary",
              fillPage(plotlyOutput("surveyplot2", height  = "100%", width = "100%")),
@@ -116,16 +119,17 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
-    output$surveyplot <- renderPlot({
+    output$surveyplot <- renderPlotly({
         # generate bins based on input$bins from ui.R
-        ggplot(survey_app, aes_string(x = input$x, fill = "Gender")) + geom_bar(stat = "count") +
+        ggplotly(ggplot(survey_app, aes_string(x = input$x, fill = "Gender")) + geom_bar(stat = "count") +
             scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) + 
             coord_flip() +
             theme_light() +
-            theme(axis.title=element_text(size=16, face="bold"), 
-                  legend.position="bottom", legend.title = element_text(size = 14), 
-                  title =element_text(size=18, face="bold")) +
-            labs(y = "# of Responses")
+            theme(axis.title=element_text(face="bold"), 
+                  legend.position="bottom", 
+                  title =element_text(face="bold")) +
+            labs(y = "# of Responses"), height = 450) %>%
+            layout(legend = list(orientation = "h", x = 0.2, y = -0.2))
     })
     output$surveyplot2 <- renderPlotly({
         # generate bins based on input$bins from ui.R
@@ -136,7 +140,7 @@ server <- function(input, output) {
             theme_light() + 
             scale_color_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
             scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
-            theme(plot.title = element_text(face = "bold")), height = 700) %>%
+            theme(plot.title = element_text(face = "bold")), height = 650) %>%
             layout(legend = list(orientation = "h", x = 0.4, y = -0.2))
     })
     
