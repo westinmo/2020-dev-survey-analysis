@@ -48,4 +48,4 @@ scripts/00-EDA.nb.html
 report.log
 
 #survey csvs (original can be downloaded from stack overflow website)
-inputs/data/survey_results_public.csv
+*survey_results_public.csv
