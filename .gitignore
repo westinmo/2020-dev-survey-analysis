@@ -43,3 +43,6 @@ vignettes/*.pdf
 
 # DS store
 .DS_Store
+
+# report log
+report.log
