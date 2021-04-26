@@ -42,7 +42,7 @@ vignettes/*.pdf
 scripts/00-EDA.nb.html
 
 # DS store
-.DS_Store
+*.DS_Store
 
 # report log
 report.log
@@ -52,5 +52,7 @@ report.log
 *rsconnect
 /shiny/survey_results_public.csv
 
+#survey csvs 
+*survey_unnest.csv
 
 
