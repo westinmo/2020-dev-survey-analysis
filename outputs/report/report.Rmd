@@ -1,23 +1,14 @@
 ---
-title: Diversity Concerns and Wage Inequalities in the United States Tech Industry
-  are Persistent
+title: "The Gender Pay Gap in the United States Tech Industry is Largest for Women with 20 to 30 Years of Professional Coding Experience"
 author: "Morgaine Westin"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
     latex_engine: xelatex
   latex_engine: default
-abstract: 'Despite promises from prominent companies to improve diversity in the workforce,
-  representation of women and racial minorities in the tech industry continues to
-  be a prominent issue. A serious consequence of gender and racial inequalities in
-  the workforce is the wage gap, in which women and women of colour in particular
-  receive lower salaries than their male counterparts. Using data from the 2020 Stack
-  Overflow Developer Survey, multiple linear regression was performed to model differences
-  in salaries among tech professionals based on gender, while taking into consideration
-  the effects of how gender may interact with other factors such as ethnicity and
-  years of experience. '
+abstract: 'Despite promises from prominent companies to improve representation and diversity in the workforce, representation of women and racial minorities in the tech industry continues to be a prominent issue. A serious consequence of gender and racial inequalities in the workforce is the wage gap, in which women and women of colour in particular receive lower salaries than their male counterparts. Using data from the 2020 Stack Overflow Developer Survey, multiple linear regression was performed to model differences in salaries among tech professionals based on gender, while taking into consideration the effects of how gender may interact with other factors such as ethnicity and years of experience. Although there were no differences in reported salaries between men and women with less years of professional coding experience, women with 20-30 years of experience reported significantly lower salaries than men with similar levels of experience, highlighting concerns about long-term retention for women in the tech industry and the underrepresentation of women in senior-level positions.'
 thanks: 'Code and data are available at: https://github.com/westinmo/2020-dev-survey-analysis.'
-toc: no
+toc: false
 bibliography: references.bib
 ---
 
@@ -58,7 +49,7 @@ Much of the research conducted on representation in STEM has focused on the expe
 
 A major consequence of underrepresentation and gender and racial disparities in the workplace involves wage gaps. In 2019, a report from the tech job platform Hired found that 60% of men were offered higher salaries than their female counterparts for the same position at the same company, and that women were offered 3% less salary on average [@hired]. For many women who discovered they were being paid less than their male counterparts in the same position, the difference in salary was at least \$20,000. Moreover, the wage disparities grow when examining both gender and race. While White women and Asian women earn approximately \$0.97 for every dollar earned by White and Asian men, Black women and Latinx women earn \$0.89 and \$0.91 respectively [@hired]. This highlights the need to take an intersectional approach when examining wage gaps, as disparities exist even among women. 
 
-In this report, I utilized data from the 2020 Stack Overflow Developer Survey to examine representation in the tech industry, and to look for potential wage disparities based on gender and ethnicity. Multiple linear regression modelling was implemented to test the effects of gender and ethnicity on salary for tech professionals in the United States. The first section of the report provides an overview of the Developer Survey and its main results, particularly regarding the demographic characteristics of the respondents. The next sections discuss the process of building and implementing the regression model used to model salary, and its results. Finally, I discuss the implications of my findings in the broader context of representation and bias in the tech industry, and the limitations of my work and how it can be extended upon. The data was prepared and analyzed in R [@citeR], primarily using the `tidyverse` [@tidy] package, while this report was compiled using R Markdown [@rmd]. A full list of packages used in this analysis and report can be found in the Appendix. 
+In this report, I utilized data from the 2020 Stack Overflow Developer Survey to examine representation in the tech industry, and to look for potential wage disparities based on gender and ethnicity. Multiple linear regression modelling was implemented to test the effects of gender and ethnicity on salary for tech professionals in the United States. The first section of the report provides an overview of the Developer Survey and its main results, particularly regarding the demographic characteristics of the respondents^[Survey responses for full-time tech workers in the United States can be explored here: https://mwestin.shinyapps.io/Dev-Survey-Shiny-App/]. The next sections discuss the process of building and implementing the regression model used to model salary, and its results. Finally, I discuss the implications of my findings in the broader context of representation and bias in the tech industry, and the limitations of my work and how it can be extended upon. The data was prepared and analyzed in R [@citeR], primarily using the `tidyverse` [@tidy] package, while this report was compiled using R Markdown [@rmd]. A full list of packages used in this analysis and report can be found in the Appendix. 
 
 
 # Data
@@ -76,7 +67,7 @@ The publicly posted dataset for the 2020 survey contains 64461 observations with
 While the data from the Stack Overflow survey covers a wide range of questions about demographics and work characteristics which all provide valuable information about the tech industry, I focused my analysis on a select few variables of interest which relate to my research question. The variables I will be discussing and focusing on in my model are: salary, gender, ethnicity, years of professional coding experience, developer type and age. When reporting salary, respondents were also asked to indicate whether the salary they input was weekly, monthly, or yearly, as well the currency. These responses were converted to annual salaries in USD by Stack Overflow based on an assumption of 12 months and 50 working weeks. Stack Overflow also trimmed the top 2% highest annual salaries in the dataset and replaced them with a threshold value equivalent to two million USD. However, to help improve model performance by reducing extreme skewness, I removed cases with annual income over \$400,000. In addition to this, I excluded responses where the reported annual salary was less than \$10,000, as many of these responses appeared invalid and were unlikely to reflect true full time salaries. After removing these responses, the overall median salary was \$110,000 USD. 
 
 
-```{r salgen, fig.width=10, echo = F}
+```{r salgen, fig.width=10, fig.height = 7, echo = F, fig.cap="Salary Distributions for Full-Time Developers by Gender"}
 #brewer.pal(n = 8, name = "Set2")
 #green: #66C2A5
 #orange: #FC8D62
@@ -110,7 +101,7 @@ genderdf <- as.data.frame(tabyl(survey_clean$Gender, sort = TRUE)) %>%
   mutate(ypos = cumsum(prop)- 0.5*prop )
 ```
 
-```{r ethnicity, fig.cap="No", echo = FALSE, fig.height=7}
+```{r ethnicity, fig.cap="Distribution of Respondents' Ethicities by Gender", echo = FALSE, fig.height=7, fig.width=8}
 eth <- survey_clean %>%
   ggplot() + 
   geom_bar(aes(x = forcats::fct_rev(fct_infreq(Ethnicity)), fill = Gender)) + 
@@ -119,7 +110,8 @@ eth <- survey_clean %>%
   ylim(0, 4300) +
   labs(x = "Ethnicity", y = "Number of Respondents", title = "The Majority of Respondents are of White or European Descent") +
   scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 10)) 
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 10),
+        legend.text=element_text(size=8), legend.title = element_text(size=10))
 
 ethW <- survey_clean %>%
   filter(Gender == "Woman") %>%
@@ -130,13 +122,14 @@ ethW <- survey_clean %>%
   ylim(0, 400) +
   labs(x = "Ethnicity", y = "Number of Respondents") +
   scale_fill_manual(values = "#8DA0CB") +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank()) +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold"), axis.title.x=element_blank(),
+        legend.text=element_text(size=8), legend.title = element_text(size=10)) +
   geom_text(aes(label = ..count.., x =Ethnicity), stat = "count", hjust = -0.3, size = 3)
   
 grid.arrange(eth, ethW)
 ```
 
-```{r saleth, echo = F, fig.cap="test"}
+```{r saleth, echo = F, fig.cap="Differences between Median Salaries for Men and Women by Ethnicity", fig.width=8}
 survey_clean$Ethnicity <- as.factor(survey_clean$Ethnicity)
 
 survey_clean %>%
@@ -150,12 +143,12 @@ survey_clean %>%
   scale_y_continuous(labels = scales::dollar_format()) +
   theme_light() +
   labs(x = "Ethnicity", y = "Median Salary in USD", title = "Salary Differences Based on Ethnicity Differ by Gender") +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold")) + 
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 11)) + 
   coord_flip() +
   scale_color_manual(values = c("#FC8D62", "#8DA0CB"))
 ```
 
-```{r yearscode, fig.cap="test", fig.height=10, echo = F}
+```{r yearscode, fig.cap="Proportion of Male, Female, and Non-Binary Respondents' Years of Professional Coding Experience", fig.height=10, echo = F}
 survey_clean <- survey_clean[!is.na(survey_clean$YearsCodeProNew), ] 
 
 m <- survey_clean %>%
@@ -164,7 +157,7 @@ m <- survey_clean %>%
   geom_bar(aes(x = YearsCodeProNew, y = (..count..)/sum(..count..)), fill = "#FC8D62") +
   theme_light() + scale_y_continuous(labels = percent) +
   labs(x = "Years of Professional Coding Experience", y = "% of Male Respondents", title = "Most Developers with Greater Years of Professional Coding Experience are Male") +
-  theme(plot.title = element_text(face = "bold"))
+  theme(plot.title = element_text(face = "bold", size = 10))
 
 f <- survey_clean %>%
   filter(Gender == "Woman") %>%
@@ -183,7 +176,7 @@ nb <- survey_clean %>%
 grid.arrange(m, f, nb)
 ```
 
-```{r}
+```{r salexp, fig.cap="Relationship between Median Salary and Years of Professional Coding Experience", echo = F, fig.width=8}
 survey_clean %>%
   filter(Gender != "Non-binary, genderqueer, or gender non-conforming") %>%
   dplyr::group_by(Gender, YearsCodeProNew) %>%
@@ -199,33 +192,32 @@ survey_clean %>%
   theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 11)) 
 
 ```
-
-
-```{r devtype1,  fig.width=10, fig.height = 10, fig.cap="test", include=F}
-survey_unnest %>%
-  ggplot(aes(x = fct_rev(fct_infreq(Gender)), y = Salary, fill = Gender)) +
-  geom_boxplot(width = .7) +
-  facet_wrap(~DevType, ncol = 3) +
-  scale_y_continuous(labels = dollar_format()) +
-  scale_x_discrete(name = "Gender Identity", labels = c("Non-Binary", "Woman", "Man")) +
-  coord_flip() +
-  theme_light() +
-  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
-    theme(legend.position = "none",
-          strip.background = element_blank(),
-          strip.text = element_text(colour = "black", size = "11"))
-#ignore
-```
-
-```{r devtype2, fig.cap="test", fig.width=7}
+```{r devtype1, fig.cap="Distribution of Developer Types", fig.width=8, echo = F}
 survey_unnest %>%
   ggplot(aes(x = fct_rev(fct_infreq(DevType)), fill = Gender)) +
   geom_bar(position = "dodge", stat = "count") + 
   coord_flip() +
   scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
   theme_light() +
-  labs(x = "Number of Respondents", y = "Developer Type", title = "Majority of Developers are Full-Stack, Back-End, and/or Front-End") +
-  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 10))
+  labs(x = "Number of Respondents", y = "Developer Type", title = "The Majority of Developers are Full-Stack, Back-End, and/or Front-End") +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold", size = 11))
+```
+
+
+```{r devtype2,  fig.width=10, fig.height = 10, fig.cap="Salary Distributions for Developer Types", echo = F}
+survey_unnest %>%
+  ggplot(aes(x = fct_rev(fct_infreq(Gender)), y = Salary, fill = Gender)) +
+  geom_boxplot(width = .7) +
+  facet_wrap(~DevType, ncol = 3) +
+  scale_y_continuous(labels = dollar_format()) +
+  scale_x_discrete(name = "Gender", labels = c("Non-Binary", "Woman", "Man")) +
+  coord_flip() +
+  theme_light() +
+  scale_fill_manual(values = c("#FC8D62", "#66C2A5", "#8DA0CB")) +
+  labs(title = "Men's Salaries are Highest for Most Developer Types") +
+    theme(legend.position = "none",
+          strip.background = element_blank(),
+          strip.text = element_text(colour = "black", size = "11"))
 ```
 
 
@@ -263,30 +255,35 @@ The output term on the left-hand of the equation represents the response variabl
 * _DevType_
 
 
-```{r, fig.width=10, include = F}
+```{r include = F}
+#removing salaries under 30000 after initial model performance check
 survey_matched <- survey_matched %>%
   filter(Salary >= 30000)
 
+#reordering reference categories for regression
 survey_matched$Ethnicity <- as.factor(survey_matched$Ethnicity) %>%
   droplevels()
+survey_matched$Ethnicity <- relevel(survey_matched$Ethnicity, ref = "White or of European descent") %>%
+  droplevels()
+survey_matched$EdLevel <- as.factor(survey_matched$EdLevel)
+survey_matched$EdLevel <- relevel(survey_matched$EdLevel, ref = "Bachelor's")
+survey_matched$DevType <- as.factor(survey_matched$DevType)
+survey_matched$DevType <- relevel(survey_matched$DevType, ref = "Full-Stack Developer")
+survey_matched$YearsCodeProCat <- as.factor(survey_matched$YearsCodeProCat)
+survey_matched$YearsCodeProCat <- relevel(survey_matched$YearsCodeProCat, ref = "Less than 5 years")
 
 salary_model <- 
   lm(log(Salary) ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
      data = survey_matched)
 
-salary_model2 <- 
-  lm(Salary ~ Gender + Ethnicity + Ethnicity * Gender + EdLevel + Age + DevType + YearsCodeProCat + YearsCodeProCat * Gender,
-     data = survey_matched)
-
 summary(salary_model)
-summary(salary_model2)
 
 RMSPE(salary_model$fitted.values, log(survey_matched$Salary))
 
 100 * (exp(0.6945963)-1)
 ```
 
-```{r performance, fig.width = 10, fig.height = 10, fig.cap="test", echo=F}
+```{r performance, fig.width = 10, fig.height = 10, fig.cap="Visual Check of Multiple Linear Regression Assumptions", echo=F}
 check_model(salary_model)
 ```
 ```{r, include = F}
@@ -319,7 +316,7 @@ $$
 $$
 i think j is the # of attributes (columns) and i is the number of observations (rows)
 
-```{r coeff, fig.width=10, fig.height = 10, echo = F}
+```{r coeff, fig.width=10, fig.height = 10, echo = F, fig.cap="Coefficients for Multiple Linear Regression Model"}
 #figure of coefficients with error bars present (95% CI)
 coefest <- broom::tidy(salary_model, conf.int = T) 
 coefest <- coefest[-1,] #removing intercept for plotting
@@ -352,7 +349,7 @@ salary_model %>%
 ```
 
 
-```{r, fig.width=10, echo = FALSE}
+```{r, fig.cap = "Intearction Plot for Gender and Experience", fig.width=10, fig.height=7, echo = FALSE}
 cat_plot(salary_model, YearsCodeProCat, Gender, 
          geom = "line", 
          colors = c("#FC8D62", "#8DA0CB"),
