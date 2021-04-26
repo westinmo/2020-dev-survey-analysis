@@ -23,32 +23,29 @@ bibliography: references.bib
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
-tinytex::reinstall_tinytex()
 library(tidyverse)
-library(reshape2)
 library(janitor)
 library(broom)
 library(scales)
 library(performance)
-library(see)
-library(lmtest)
+library(see) 
 library(plyr)
 library(kableExtra)
 library(qqplotr)
 library(MLmetrics)
 library(gtsummary)
 library(flextable)
-library(jtools)
 library(interactions)
 library(RColorBrewer)
 library(gridExtra)
 library(forcats)
+library(plotly)
 
 survey_clean <- read_csv(here::here("inputs/data/survey_clean.csv")) 
 survey_unnest <- read_csv(here::here("inputs/data/survey_unnest.csv")) 
 survey_matched <- read_csv(here::here("inputs/data/survey_matched.csv")) 
 ```
-**Keywords**: gender inequality, technology industry, wage gap, race, intersectionality, multiple linear regression
+**Keywords**: gender inequality, technology industry, wage gap, race, intersectionality, retention, propensity score matching, multiple linear regression
 
 # Introduction
 In 2019, the United States tech industry had 12.1 million employees and nearly 4.6 million job postings, many of which were for new emerging tech areas [@cyber] As the tech industry continues to grow and reports indicate the median wage for tech professionals is almost double the median national wage in the United States, more people are looking to enter the field. However, despite industry growth and the number of opportunities available, the tech field has been consistently dominated by white or Asian men [@harrison]. Gender and racial disparities in science, technology, engineering, and medicine (STEM) fields have been well documented. Notably, women and people of colour, particularly those identifying as African American, Latinx or Hispanic, or Native American, have been disproportionately underrepresented in these fields. [@jackson2013shared]. In response to growing calls for diversity, large tech companies such as Google, Microsoft, and Facebook have launched initiatives and pledges to help support underrepresented groups both within the workplace, and externally through funds, outreach programs, and diverse recruitment practices [@harrison; @bloomberg]. Whether or not these initiatives are effective is up for debate, with critics calling some diversity pledges “hollow” and arguing that companies need to make more meaningful efforts before we start seeing significant diversity improvements in the data [@rooney; @twine2018technology].
@@ -61,7 +58,7 @@ Much of the research conducted on representation in STEM has focused on the expe
 
 A major consequence of underrepresentation and gender and racial disparities in the workplace involves wage gaps. In 2019, a report from the tech job platform Hired found that 60% of men were offered higher salaries than their female counterparts for the same position at the same company, and that women were offered 3% less salary on average [@hired]. For many women who discovered they were being paid less than their male counterparts in the same position, the difference in salary was at least \$20,000. Moreover, the wage disparities grow when examining both gender and race. While White women and Asian women earn approximately \$0.97 for every dollar earned by White and Asian men, Black women and Latinx women earn \$0.89 and \$0.91 respectively [@hired]. This highlights the need to take an intersectional approach when examining wage gaps, as disparities exist even among women. 
 
-In this report, I utilized data from the 2020 Stack Overflow Developer Survey to examine representation in the tech industry, and to look for potential wage disparities based on gender and ethnicity. Multiple linear regression modelling was implemented to test the effects of gender and ethnicity on salary for tech professionals in the United States. The first section of the report provides an overview of the Developer Survey and its main results, particularly regarding the demographic characteristics of the respondents. The next sections discuss the process of building and implementing the regression model used to model salary, and its results. Finally, I discuss the implications of my findings in the broader context of representation and bias in the tech industry, and the limitations of my work and how it can be extended upon. The data was prepared and analyzed in R [@citeR], primarily using the `tidyverse` [@tidy] package, while this report was compiled using R Markdown [@rmd].
+In this report, I utilized data from the 2020 Stack Overflow Developer Survey to examine representation in the tech industry, and to look for potential wage disparities based on gender and ethnicity. Multiple linear regression modelling was implemented to test the effects of gender and ethnicity on salary for tech professionals in the United States. The first section of the report provides an overview of the Developer Survey and its main results, particularly regarding the demographic characteristics of the respondents. The next sections discuss the process of building and implementing the regression model used to model salary, and its results. Finally, I discuss the implications of my findings in the broader context of representation and bias in the tech industry, and the limitations of my work and how it can be extended upon. The data was prepared and analyzed in R [@citeR], primarily using the `tidyverse` [@tidy] package, while this report was compiled using R Markdown [@rmd]. A full list of packages used in this analysis and report can be found in the Appendix. 
 
 
 # Data
@@ -369,14 +366,57 @@ cat_plot(salary_model, YearsCodeProCat, Gender,
 
 \newpage
 
-```{r}
-citation("flextable")
-```
-
-
 \appendix
 
 # Appendix {-}
+
+## Packages {-}
+
+This subsection lists the R packages used in the making of this report.
+
+### General data cleaning and analysis {-}
+
+* `tidyverse` [@tidy]
+* `dplyr` [@dplyr]
+* `janitor` [@janitor]
+* `purr` [@purrr]
+* `broom` [@broom]
+* `scales` [@scales]
+* `plyr` [@plyr]
+* `forcats` [@forcats]
+* `visdat` [@visdat]
+
+### Figures {-}
+
+* `ggplot2` [@ggplot]
+* `RColorBrewer` [@RColorBrewer]
+* `gridExtra` [@gridextra]
+* `qqplotr` [@qqplotr]
+* `performance` [@performance]
+* `interactions` [@interactions] 
+
+### Tables {-}
+
+* `kableExtra` [@kable]
+* `gtsummary` [@gtsummary]
+* `flextable` [@flextable]
+
+### RMarkdown Report {-}
+
+* `knitr` [@knitr]
+* `bookdown` [@bookdown]
+* `tinytex` [@tinytex]
+
+### Shiny App {-}
+
+* `shiny` [@shiny]
+* `shinythemes` [@shinythemes]
+* `plotly` [@plotly]
+
+### Propensity Score Matching and Modeling {-}
+
+* `arm` [@arm]
+* `MLmetrics` [@MLmetrics]
 
 \newpage
 
