@@ -42,12 +42,12 @@ survey_test$YearsCodeProCat <- cut(survey_test$YearsCodeProNew,
   relevel(survey_test$YearsCodeProCat, ref = "Less than 5 years")
 
 
-#PSM for gender
+#PSM for gender 
 propensity_score <- glm(Gender ~ Ethnicity + EdLevel + DevType + Age + Age1stCode + YearsCode + YearsCodeProNew
                         + UndergradMajor,
                         family = binomial,
                         data = survey_test) #creation of lm model to "predict" gender and match based on selected characteristics
-
+#adding predictions from lm to the dataset
 survey_test <- 
   augment(propensity_score, 
           data = survey_test,
@@ -58,7 +58,7 @@ survey_test <-
 survey_test$Gender2 <- revalue(survey_test$Gender, c("Man"=0, "Woman"=1, "Non-binary, genderqueer, or gender non-conforming"=2)) 
 survey_test$Gender2 <- as.integer(as.character(survey_test$Gender2))
 
-#Creating matched dataset
+#Creating matched dataset to find closest matches (only including responses which were matched with treatment group)
 matches <- arm::matching(z = survey_test$Gender2, score = survey_test$.fitted, replace = F)
 survey_test <- cbind(survey_test, matches)
 survey_matched <- 

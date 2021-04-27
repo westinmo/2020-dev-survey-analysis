@@ -48,19 +48,18 @@ survey_clean$Gender <- case_when(str_detect(survey_clean$Gender, "Non-binary, ge
                                 ~ "Non-binary, genderqueer, or gender non-conforming",
                                 TRUE ~ survey_clean$Gender)
 survey_clean$Gender[survey_clean$Gender == "Woman;Man" ] <- "Non-binary, genderqueer, or gender non-conforming"
-
 survey_clean$Gender <- as.factor(survey_clean$Gender) %>%
   droplevels()
 
 #Ethnicity
-#To simplify analysis, removing cases who selected more than one ethnicity (489)
+#To simplify analysis, removing cases who selected more than one ethnicity (489) -> including biracial and multiracial cases
 multiple_eth <- survey_clean %>%
   filter(str_detect(Ethnicity, ";|Biracial|Multiracial"))
 
 survey_clean <- survey_clean %>%
   anti_join(multiple_eth)
 
-#Relabelling Indigenous
+#Relabelling Indigenous (shorter label for graphs)
 survey_clean$Ethnicity <- case_when(
   str_detect(survey_clean$Ethnicity, "Indigenous") ~ "Indigenous", TRUE ~ survey_clean$Ethnicity)
 #6371 cases remaining
@@ -69,6 +68,7 @@ survey_clean$Ethnicity <- case_when(
 #Recfactoring Education levels
 survey_clean$EdLevel <- as.factor(survey_clean$EdLevel)
 
+#combining less than bachelor's degree
 survey_clean$EdLevel <- fct_collapse(survey_clean$EdLevel,
                                      `Less than Bachelor's Degree` = c("I never completed any formal education", 
                                               "Primary/elementary school",
@@ -89,9 +89,6 @@ remove <- survey_clean %>%
 
 survey_clean <- survey_clean %>%
   anti_join(remove)
-
-
-table(remove$Gender)
 
 #Splitting DevType
 survey_unnest <- survey_clean %>% 
@@ -117,7 +114,7 @@ survey_unnest$DevType <-
   )
 survey_unnest <- survey_unnest[!is.na(survey_unnest$DevType), ]
 
-
+#saving dataset
 write_csv(survey_clean, here::here("inputs/data/survey_clean.csv"))
 write_csv(survey_unnest, here::here("inputs/data/survey_unnest.csv"))
 
